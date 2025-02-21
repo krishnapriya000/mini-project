@@ -1,4 +1,5 @@
 <?php
+// include "header.php";
 session_start();
 require_once($_SERVER['DOCUMENT_ROOT'] . '/baby/connect.php');
 
@@ -389,17 +390,6 @@ if ($product['stock_quantity'] > 0) {
             <form method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="add_product">
                 
-                <div class="form-group">
-                    <label>Seller</label>
-                    <select name="seller_id" required>
-                        <option value="">Select Seller</option>
-                        <?php while ($seller = mysqli_fetch_assoc($sellersResult)): ?>
-                            <option value="<?php echo $seller['seller_id']; ?>">
-                                <?php echo htmlspecialchars($seller['seller_name']); ?>
-                            </option>
-                        <?php endwhile; ?>
-                    </select>
-                </div>
 
                 <div class="form-group">
                     <label>Category</label>
@@ -616,4 +606,4 @@ $image_url = isset($image_url) ? $image_url : ''; // Ensure $image_url is set
         }
     </script>
 </body>
-</html>mmmmmmmm
+</html>

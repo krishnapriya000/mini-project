@@ -13,6 +13,11 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Function to validate category/subcategory names (no numbers allowed)
+function validateName($name) {
+    return preg_match('/^[A-Za-z ]+$/', $name);
+}
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
@@ -20,6 +25,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'add_category':
                 $name = $_POST['name'];
                 $description = $_POST['description'];
+                
+                // Validate category name
+                if (!validateName($name)) {
+                    $_SESSION['error'] = "Category name must contain only letters and spaces.";
+                    break;
+                }
             
                 // Check if category already exists
                 $checkStmt = $conn->prepare("SELECT * FROM categories_table WHERE name = ?");
@@ -40,29 +51,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
-                case 'add_subcategory':
-                    $category_id = $_POST['category_id'];
-                    $subcategory_name = $_POST['subcategory_name'];
-                    $description = $_POST['description'];
+            case 'add_subcategory':
+                $category_id = $_POST['category_id'];
+                $subcategory_names = $_POST['subcategory_names']; // Expecting an array of subcategories
+                $description = $_POST['description'];
                 
+                foreach ($subcategory_names as $subcategory_name) {
+                    // Validate subcategory name
+                    if (!validateName($subcategory_name)) {
+                        $_SESSION['error'] = "Subcategory names must contain only letters and spaces.";
+                        continue;
+                    }
+                    
                     // Check if subcategory already exists under the same category
                     $checkStmt = $conn->prepare("SELECT * FROM subcategories WHERE category_id = ? AND subcategory_name = ?");
                     $checkStmt->bind_param("is", $category_id, $subcategory_name);
                     $checkStmt->execute();
                     $checkResult = $checkStmt->get_result();
-                
-                    if ($checkResult->num_rows > 0) {
-                        $_SESSION['error'] = "Subcategory already exists under this category.";
-                    } else {
-                        $stmt = $conn->prepare("INSERT INTO subcategories (category_id, subcategory_name, description, is_active) VALUES (?, ?, ?, 1)");
+                    
+                    if ($checkResult->num_rows == 0) {
+                        $stmt = $conn->prepare("INSERT INTO subcategories (category_id, subcategory_name, description) VALUES (?, ?, ?)");
                         $stmt->bind_param("iss", $category_id, $subcategory_name, $description);
-                        if ($stmt->execute()) {
-                            $_SESSION['message'] = "Subcategory added successfully";
-                        } else {
-                            $_SESSION['error'] = "Error adding subcategory: " . $stmt->error;
-                        }
+                        $stmt->execute();
                     }
-                    break;
+                }
+                $_SESSION['message'] = "Subcategories added successfully.";
+                break;
+
+            case 'add_nested_subcategory':
+                $parent_subcategory_id = $_POST['parent_subcategory_id'];
+                $nested_subcategory_names = $_POST['nested_subcategory_names']; // Expecting an array of nested subcategories
+                $description = $_POST['description'];
+                
+                foreach ($nested_subcategory_names as $nested_subcategory_name) {
+                    // Validate nested subcategory name
+                    if (!validateName($nested_subcategory_name)) {
+                        $_SESSION['error'] = "Nested subcategory names must contain only letters and spaces.";
+                        continue;
+                    }
+                    
+                    // Check if nested subcategory already exists
+                    $checkStmt = $conn->prepare("SELECT * FROM nested_subcategories WHERE parent_subcategory_id = ? AND nested_subcategory_name = ?");
+                    $checkStmt->bind_param("is", $parent_subcategory_id, $nested_subcategory_name);
+                    $checkStmt->execute();
+                    $checkResult = $checkStmt->get_result();
+                    
+                    if ($checkResult->num_rows == 0) {
+                        $stmt = $conn->prepare("INSERT INTO nested_subcategories (parent_subcategory_id, nested_subcategory_name, description) VALUES (?, ?, ?)");
+                        $stmt->bind_param("iss", $parent_subcategory_id, $nested_subcategory_name, $description);
+                        $stmt->execute();
+                    }
+                }
+                $_SESSION['message'] = "Nested subcategories added successfully.";
+                break;
+    
+
+
+
+
+
+
+
+
 
             case 'soft_delete_category':
                 $category_id = $_POST['category_id'];

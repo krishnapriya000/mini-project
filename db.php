@@ -190,6 +190,42 @@ if (!$conn->query($alter_subcategories)) {
     echo "Error altering subcategories table: " . $conn->error . "<br>";
 }
 
+
+
+
+
+// Add this code after the subcategories table creation in your db.php file
+
+// Create nested subcategories table
+$nested_subcategories_table = "CREATE TABLE IF NOT EXISTS nested_subcategories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    parent_subcategory_id INT NOT NULL,
+    nested_subcategory_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    is_active TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_subcategory_id) REFERENCES subcategories(id) ON DELETE CASCADE
+)";
+
+// Execute the query and handle any errors
+if (!$conn->query($nested_subcategories_table)) {
+    echo "Error creating nested_subcategories table: " . $conn->error . "<br>";
+}
+
+// Also update the product table to reference nested subcategories if needed
+$alter_product_table = "ALTER TABLE product_table 
+    ADD COLUMN IF NOT EXISTS nested_subcategory_id INT,
+    ADD FOREIGN KEY (nested_subcategory_id) REFERENCES nested_subcategories(id) ON DELETE SET NULL";
+
+if (!$conn->query($alter_product_table)) {
+    echo "Error altering product table: " . $conn->error . "<br>";
+}
+
+// Add index for better query performance
+$add_index = "CREATE INDEX IF NOT EXISTS idx_nested_parent ON nested_subcategories(parent_subcategory_id)";
+if (!$conn->query($add_index)) {
+    echo "Error creating index: " . $conn->error . "<br>";
+}
 // Close the connection
 $conn->close();
 ?>
