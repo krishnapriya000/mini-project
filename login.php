@@ -1,6 +1,6 @@
 <?php
 session_start();
-ob_start(); // Prevent header issues
+ob_start();
 
 require_once($_SERVER['DOCUMENT_ROOT'] . '/baby/connect.php');
 
@@ -17,7 +17,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (empty($username) || empty($password)) {
         $error_message = "Please enter both username and password.";
     } else {
-        $sql = "SELECT * FROM signup WHERE username = ?";
+        // Modified query to join with seller table
+        $sql = "SELECT s.*, sel.seller_id 
+                FROM signup s 
+                LEFT JOIN seller sel ON s.signupid = sel.signupid 
+                WHERE s.username = ?";
+                
         $stmt = $conn->prepare($sql);
 
         if (!$stmt) {
@@ -30,25 +35,37 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         if ($result->num_rows === 1) {
             $row = $result->fetch_assoc();
+            
+            // Debug information
+            error_log("User found: " . print_r($row, true));
 
-            // Debugging: Print user data
-            // echo "<pre>";
-            // print_r($row);
-            // echo "</pre>";
-
-            // Handle account status
             if ($row['status'] === 'inactive') {
                 $error_message = "Your account has been deactivated. Please contact support.";
             } elseif ($row['status'] === 'pending') {
                 $error_message = "Your account is pending approval.";
             } elseif ($row['status'] === 'active') {
-                // Verify password
                 if (password_verify($password, $row['password'])) {
-                    echo "Debug: Password matched!<br>";
-
+                    // Set all necessary session variables
                     $_SESSION['user_id'] = $row['signupid'];
                     $_SESSION['username'] = $row['username'];
                     $_SESSION['reg_type'] = $row['reg_type'];
+                    
+                    // For sellers, also store seller_id
+                    if ($row['reg_type'] === 'seller') {
+                        $_SESSION['seller_id'] = $row['seller_id'];
+                    }
+
+                    // Log the login attempt
+                    error_log("Successful login - Username: $username, Type: " . $row['reg_type']);
+
+                    // Insert login record
+                    $login_sql = "INSERT INTO login (signup_id, login_date) VALUES (?, CURDATE())";
+                    $login_stmt = $conn->prepare($login_sql);
+                    $login_stmt->bind_param("i", $row['signupid']);
+                    $login_stmt->execute();
+
+                    // Clear any existing output
+                    ob_clean();
 
                     // Redirect based on user type
                     switch ($row['reg_type']) {
@@ -64,13 +81,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     }
                     exit();
                 } else {
-                    echo "Debug: Password does NOT match!<br>";
+                    error_log("Failed login attempt - Invalid password for username: $username");
                     $error_message = "Invalid password!";
                 }
             } else {
                 $error_message = "Invalid account status!";
             }
         } else {
+            error_log("Failed login attempt - No user found for username: $username");
             $error_message = "No account found with this username.";
         }
 
@@ -78,51 +96,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     $conn->close();
 }
-
-
-
-
-
-
-
-
-
-
-
-//             // Verify password
-//             if (password_verify($password, $row['password'])) {
-//                 // $_SESSION['user_id'] = $row['id'];
-//                 $_SESSION['user_id'] = $row['signupid'];
-
-//                 $_SESSION['username'] = $row['username'];
-//                 $_SESSION['reg_type'] = $row['reg_type'];
-
-//                 // Redirect based on user type
-//                 switch ($row['reg_type']) {
-//                     case 'admin':
-//                         header("Location: admindashboard.php");
-//                         break;
-//                     case 'seller':
-//                         header("Location: sellerdashboard.php");
-//                         break;
-//                     default:
-//                         header("Location: index.php");
-//                         break;
-//                 }
-//                 exit();
-//             } else {
-//                 $error_message = "Invalid password!";
-//             }
-//         } else {
-//             $error_message = "No account found with this username.";
-//         }
-
-//         $stmt->close();
-//     }
-//     $conn->close();
-// }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>

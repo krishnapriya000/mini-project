@@ -367,7 +367,7 @@ if ($product['stock_quantity'] > 0) {
         <div class="logo">BabyCubs</div>
         <ul>
             <li><a href="index.php"><i class="fas fa-home"></i> Home</a></li>
-            <li><a href="admindashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+            <li><a href="sellerdashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
             <li><a href="category_admin.php"><i class="fas fa-list"></i> Categories</a></li>
             <li><a href="product_admin.php"><i class="fas fa-box"></i> Products</a></li>
             <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>

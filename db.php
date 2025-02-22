@@ -226,6 +226,23 @@ $add_index = "CREATE INDEX IF NOT EXISTS idx_nested_parent ON nested_subcategori
 if (!$conn->query($add_index)) {
     echo "Error creating index: " . $conn->error . "<br>";
 }
+
+
+// Add this to your db.php file
+
+$brand_table = "CREATE TABLE IF NOT EXISTS brand_table (
+    brand_id INT AUTO_INCREMENT PRIMARY KEY,
+    category_id INT NOT NULL,
+    subcategory_id INT NOT NULL,
+    brand_name VARCHAR(100) NOT NULL UNIQUE,
+    FOREIGN KEY (category_id) REFERENCES categories_table(category_id) ON DELETE CASCADE,
+    FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+if (!$conn->query($brand_table)) {
+    echo "Error creating brand table: " . $conn->error . "<br>";
+}
+
 // Close the connection
 $conn->close();
 ?>
