@@ -291,6 +291,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['error'] = "Error deleting brand: " . $stmt->error;
                 }
                 break;
+
+                case 'update_nested_subcategory':
+                    $nested_id = $_POST['nested_id'];
+                    $nested_name = $_POST['nested_name'];
+                    $description = $_POST['description'];
+                    
+                    if (!validateName($nested_name)) {
+                        $_SESSION['error'] = "Nested subcategory name must contain only letters and spaces.";
+                        break;
+                    }
+                    
+                    $stmt = $conn->prepare("UPDATE nested_subcategories SET nested_subcategory_name = ?, description = ? WHERE id = ?");
+                    $stmt->bind_param("ssi", $nested_name, $description, $nested_id);
+                    if ($stmt->execute()) {
+                        $_SESSION['message'] = "Nested subcategory updated successfully";
+                    } else {
+                        $_SESSION['error'] = "Error updating nested subcategory: " . $stmt->error;
+                    }
+                    break;
         }
     }
 }
@@ -320,7 +339,7 @@ $result = $conn->query($query);
     <title>Category Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <style>
-               * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background: rgb(248, 191, 125); display: flex; }
 
         /* Sidebar Styles */
@@ -493,6 +512,7 @@ $result = $conn->query($query);
             cursor: pointer;
             font-size: 24px;
         }
+
         .nested-subcategory-list {
             margin-left: 45px;
             border-left: 2px solid #28a745;
@@ -660,20 +680,20 @@ $result = $conn->query($query);
                         $current_subcategory = $row['subcategory_id'];
                     }
 
-                    // Display nested subcategories if they exist
-                    if ($row['nested_id']) {
-                        echo "<div class='nested-subcategory-item'>";
-                        echo "<strong>" . htmlspecialchars($row['nested_subcategory_name']) . "</strong>";
-                        echo "<p>" . htmlspecialchars($row['nested_description']) . "</p>";
-                        echo "<div class='action-buttons'>";
-                        echo "<button onclick='showEditNestedSubcategoryModal({$row['nested_id']}, \"" . htmlspecialchars($row['nested_subcategory_name']) . "\", \"" . htmlspecialchars($row['nested_description']) . "\")' class='btn btn-edit'>Edit</button>";
-                        echo "<form method='POST' style='display: inline;'>";
-                        echo "<input type='hidden' name='action' value='delete_nested_subcategory'>";
-                        echo "<input type='hidden' name='nested_id' value='{$row['nested_id']}'>";
-                        echo "<button type='submit' class='btn btn-danger' onclick='return confirm(\"Are you sure?\")'>Delete</button>";
-                        echo "</form>";
-                        echo "</div></div>";
-                    }
+                   // Display nested subcategories if they exist
+if ($row['nested_id']) {
+    echo "<div class='nested-subcategory-item'>";
+    echo "<strong>" . htmlspecialchars($row['nested_subcategory_name']) . "</strong>";
+    echo "<p>" . htmlspecialchars($row['nested_description']) . "</p>";
+    echo "<div class='action-buttons'>";
+    echo "<button onclick='showEditNestedSubcategoryModal({$row['nested_id']}, \"" . htmlspecialchars($row['nested_subcategory_name']) . "\", \"" . htmlspecialchars($row['nested_description']) . "\")' class='btn btn-edit'>Edit</button>";
+    echo "<form method='POST' style='display: inline;'>";
+    echo "<input type='hidden' name='action' value='delete_nested_subcategory'>";
+    echo "<input type='hidden' name='nested_id' value='{$row['nested_id']}'>";
+    echo "<button type='submit' class='btn btn-danger' onclick='return confirm(\"Are you sure?\")'>Delete</button>";
+    echo "</form>";
+    echo "</div></div>";
+}
 
                     // Display brands if they exist
                     if ($row['brand_id']) {
@@ -699,8 +719,8 @@ $result = $conn->query($query);
         </div>
     </div>
 
-        <!-- Edit Category Modal -->
-        <div id="editCategoryModal" class="modal">
+    <!-- Edit Category Modal -->
+    <div id="editCategoryModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('editCategoryModal')">&times;</span>
             <h2>Edit Category</h2>
@@ -826,9 +846,49 @@ $result = $conn->query($query);
         </div>
     </div>
 
+    <!-- Edit Nested Subcategory Modal -->
+<div id="editNestedSubcategoryModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('editNestedSubcategoryModal')">&times;</span>
+        <h2>Edit Nested Subcategory</h2>
+        <form method="POST">
+            <input type="hidden" name="action" value="update_nested_subcategory">
+            <input type="hidden" name="nested_id" id="edit_nested_id">
+            <div class="form-group">
+                <label>Nested Subcategory Name</label>
+                <input type="text" name="nested_name" id="edit_nested_name" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" id="edit_nested_description" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Nested Subcategory</button>
+        </form>
+    </div>
+</div>
+
     <script>
-        // Previous JavaScript functions remain the same
-        
+        // JavaScript functions to handle modals
+        function showEditCategoryModal(categoryId, categoryName, categoryDescription) {
+            document.getElementById('edit_category_id').value = categoryId;
+            document.getElementById('edit_category_name').value = categoryName;
+            document.getElementById('edit_category_description').value = categoryDescription;
+            document.getElementById('editCategoryModal').style.display = 'block';
+        }
+
+        function showEditSubcategoryModal(subcategoryId, subcategoryName, subcategoryDescription) {
+            document.getElementById('edit_subcategory_id').value = subcategoryId;
+            document.getElementById('edit_subcategory_name').value = subcategoryName;
+            document.getElementById('edit_subcategory_description').value = subcategoryDescription;
+            document.getElementById('editSubcategoryModal').style.display = 'block';
+        }
+
+        function showAddSubcategoryModal(categoryId, categoryName) {
+            document.getElementById('subcategory_parent_id').value = categoryId;
+            document.getElementById('subcategory_parent_name').value = categoryName;
+            document.getElementById('addSubcategoryModal').style.display = 'block';
+        }
+
         function showAddNestedSubcategoryModal(parentId, parentName) {
             document.getElementById('nested_parent_id').value = parentId;
             document.getElementById('nested_parent_name').value = parentName;
@@ -846,6 +906,12 @@ $result = $conn->query($query);
             document.getElementById('edit_brand_name').value = brandName;
             document.getElementById('editBrandModal').style.display = 'block';
         }
+        function showEditNestedSubcategoryModal(nestedId, nestedName, nestedDescription) {
+    document.getElementById('edit_nested_id').value = nestedId;
+    document.getElementById('edit_nested_name').value = nestedName;
+    document.getElementById('edit_nested_description').value = nestedDescription;
+    document.getElementById('editNestedSubcategoryModal').style.display = 'block';
+}
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
@@ -854,7 +920,7 @@ $result = $conn->query($query);
         // Close modals when clicking outside
         window.onclick = function(event) {
             if (event.target.classList.contains('modal')) {
-                event.target.style.display = 'none';
+                event.target.style.display = 'none'
             }
         }
 

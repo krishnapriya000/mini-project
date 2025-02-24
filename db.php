@@ -121,7 +121,7 @@ $product_table = "CREATE TABLE IF NOT EXISTS product_table (
 // Try to create the table and handle any errors
 try {
     if ($conn->query($product_table) === TRUE) {
-        echo "Product table created successfully<br>";
+       // echo "Product table created successfully<br>";
     } else {
         throw new Exception($conn->error);
     }
@@ -135,7 +135,7 @@ try {
 try {
     $result = $conn->query("DESCRIBE product_table");
     if ($result) {
-        echo "Product table structure verified successfully<br>";
+       // echo "Product table structure verified successfully<br>";
     } else {
         throw new Exception($conn->error);
     }
@@ -244,5 +244,5 @@ if (!$conn->query($brand_table)) {
 }
 
 // Close the connection
-$conn->close();
+//$conn->close();
 ?>
