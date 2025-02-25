@@ -1,9 +1,17 @@
 <?php
 // Include database connection
 require_once 'db.php';
+session_start(); // Start the session to access session variables
 
-// Connect to database using the existing connection from db.php
-// No need to create a new connection
+// Check if the user is logged in
+if (!isset($_SESSION['seller_id'])) {
+    // Redirect to login page if not logged in
+    header("Location: login.php");
+    exit();
+}
+
+// Get seller_id from session
+$seller_id = $_SESSION['seller_id'];
 
 // Process form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -19,10 +27,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $colour = $_POST['colour'];
     $condition_type = $_POST['condition_type'];
     $description = $_POST['description'];
-
-    // Get seller_id (You'll need to implement this based on your login system)
-    // For now, using a placeholder. In a real application, you would get this from the session
-    $seller_id = 4; // Replace with actual seller_id from session
 
     // Handle file upload
     $target_dir = "uploads/products/";
@@ -81,6 +85,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             $condition_type, 
                             $image_url
                         );
+
+                        if ($stmt->execute()) {
+                            // Redirect to products.php after successful insertion
+                            header("Location: products.php");
+                            exit();
+                        } else {
+                            $error_message = "Error executing statement: " . $stmt->error;
+                            error_log($error_message);
+                            echo "<script>alert('$error_message');</script>";
+                        }
+                        $stmt->close();
+                    } else {
+                        $error_message = "Error preparing statement: " . $conn->error;
+                        error_log($error_message);
+                        echo "<script>alert('$error_message');</script>";
                     }
                 } else {
                     $sql = "INSERT INTO product_table (seller_id, category_id, subcategory_id, nested_subcategory_id, 
@@ -104,23 +123,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             $condition_type, 
                             $image_url
                         );
-                    }
-                }
-                if ($stmt) {
-                    if ($stmt->execute()) {
-                        // Redirect to products.php after successful insertion
-                        header("Location: products.php");
-                        exit();
+
+                        if ($stmt->execute()) {
+                            // Redirect to products.php after successful insertion
+                            header("Location: products.php");
+                            exit();
+                        } else {
+                            $error_message = "Error executing statement: " . $stmt->error;
+                            error_log($error_message);
+                            echo "<script>alert('$error_message');</script>";
+                        }
+                        $stmt->close();
                     } else {
-                        $error_message = "Error executing statement: " . $stmt->error;
+                        $error_message = "Error preparing statement: " . $conn->error;
                         error_log($error_message);
                         echo "<script>alert('$error_message');</script>";
                     }
-                    $stmt->close();
-                } else {
-                    $error_message = "Error preparing statement: " . $conn->error;
-                    error_log($error_message);
-                    echo "<script>alert('$error_message');</script>";
                 }
                 
                 // Close the connection
@@ -140,22 +158,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-// Reconnect to the database if the connection was closed
-$conn = new mysqli($servername, $username, $password, $database);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
 // Fetch categories for dropdown
+$conn = new mysqli($servername, $username, $password, $database);
 $category_query = "SELECT * FROM categories_table ORDER BY name";
 $category_result = $conn->query($category_query);
-
-// Close the connection after fetching categories
-// We'll reconnect when needed
 $conn->close();
 ?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Product - BabyCubs Seller Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Your existing CSS styles */
+    </style>
+</head>
+<body>
+    <!-- Your existing HTML structure -->
+</body>
+</html>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -380,10 +404,10 @@ $conn->close();
             <h1><i class="fas fa-baby"></i> BabyCubs</h1>
         </div>
         <ul class="sidebar-menu">
-            <li><a href="dashboard.php"><i class="fas fa-home"></i> Home</a></li>
-            <li><a href="dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-            <li><a href="categories.php"><i class="fas fa-tags"></i> Categories</a></li>
-            <li><a href="products.php" class="active"><i class="fas fa-box"></i> Products</a></li>
+            <li><a href="index.php"><i class="fas fa-home"></i> Home</a></li>
+            <li><a href="sellerdashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+            <li><a href="product manage.php"><i class="fas fa-tags"></i> Add Products</a></li>
+            <li><a href="products.php" class="active"><i class="fas fa-box"></i> MyProducts</a></li>
             <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
         </ul>
     </div>

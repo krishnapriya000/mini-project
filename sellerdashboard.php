@@ -17,6 +17,35 @@ if (!$conn) {
     die("Database connection failed: " . mysqli_connect_error());
 }
 
+// Check if the form is submitted
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Get the input values
+    $business_name = htmlspecialchars($_POST['business_name']);
+    $description = htmlspecialchars($_POST['description']);
+    
+    // Prepare the update query
+    $update_query = "UPDATE seller SET business_name = ?, description = ? WHERE seller_id = ?";
+    $stmt = $conn->prepare($update_query);
+    
+    if ($stmt) {
+        // Bind parameters
+        $stmt->bind_param("ssi", $business_name, $description, $seller_id);
+        
+        // Execute the statement
+        if ($stmt->execute()) {
+            echo "<script>alert('Information updated successfully!');</script>";
+        } else {
+            echo "<script>alert('Error updating information: " . $stmt->error . "');</script>";
+        }
+        
+        // Close the statement
+        $stmt->close();
+    } else {
+        echo "<script>alert('Prepare failed: " . $conn->error . "');</script>";
+    }
+}
+
+// Get seller data after potential update
 $seller_query = "SELECT s.*, sg.email, sg.phone 
                  FROM seller s 
                  JOIN signup sg ON s.signupid = sg.signupid 
