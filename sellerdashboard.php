@@ -12,32 +12,36 @@ if (!isset($_SESSION['seller_id'])) {
 $seller_id = $_SESSION['seller_id'];
 $conn = new mysqli($servername, $username, $password, $database);
 
+// Check database connection
+if (!$conn) {
+    die("Database connection failed: " . mysqli_connect_error());
+}
+
 $seller_query = "SELECT s.*, sg.email, sg.phone 
                  FROM seller s 
                  JOIN signup sg ON s.signupid = sg.signupid 
                  WHERE s.seller_id = ?";
-$stmt = $conn->prepare($seller_query);
-$stmt->bind_param("i", $seller_id);
-$stmt->execute();
-$result = $stmt->get_result();
-$seller_data = $result->fetch_assoc();
 
-// Handle form submission for updating business info
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $business_name = $_POST['business_name'];
-    $description = $_POST['description'];
-    
-    $update_query = "UPDATE seller 
-                     SET business_name = ?, description = ? 
-                     WHERE seller_id = ?";
-    $stmt = $conn->prepare($update_query);
-    $stmt->bind_param("ssi", $business_name, $description, $seller_id);
-    $stmt->execute();
-    
-    // Refresh seller data
-    $result = $stmt->get_result();
-    $seller_data = $result->fetch_assoc();
+$stmt = $conn->prepare($seller_query);
+if (!$stmt) {
+    die("Prepare failed: " . $conn->error); // Debugging message
 }
+
+$stmt->bind_param("i", $seller_id);
+if (!$stmt->execute()) {
+    die("Query execution failed: " . $stmt->error); // Debugging message
+}
+
+$result = $stmt->get_result();
+if (!$result) {
+    die("Get result failed: " . $conn->error); // Debugging message
+}
+
+$seller_data = $result->fetch_assoc();
+if (!$seller_data) {
+    die("No seller data found for this seller ID.");
+}
+
 ?>
 
 <!DOCTYPE html>

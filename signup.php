@@ -260,45 +260,50 @@ function test_input($data) {
             <label for="username">Username</label>
             <input type="text" id="username" name="username" value="<?php echo $username; ?>" 
                    onfocus="showHelperText('username-helper', 'Enter your full name using only letters and spaces.')" 
-                   onblur="clearHelperText('username-helper')">
+                   onblur="clearHelperText('username-helper')"
+                   oninput="validateUsername()">
             <span id="username-helper" class="helper-text"></span>
-            <span class="error"><?php echo $usernameErr; ?></span>
+            <span class="error" id="username-error"><?php echo $usernameErr; ?></span>
         </div>
 
         <div class="form-group">
             <label for="email">Email</label>
             <input type="email" id="email" name="email" value="<?php echo $email; ?>" 
                    onfocus="showHelperText('email-helper', 'Enter a valid email address (e.g., name@example.com)')" 
-                   onblur="clearHelperText('email-helper')">
+                   onblur="clearHelperText('email-helper')"
+                   oninput="validateEmail()">
             <span id="email-helper" class="helper-text"></span>
-            <span class="error"><?php echo $emailErr; ?></span>
+            <span class="error" id="email-error"><?php echo $emailErr; ?></span>
         </div>
 
         <div class="form-group">
             <label for="number">Mobile Number</label>
             <input type="tel" id="number" name="number" value="<?php echo $number; ?>" 
                    onfocus="showHelperText('number-helper', 'Enter 10-digit number starting with 9, 8, 7, or 6')" 
-                   onblur="clearHelperText('number-helper')">
+                   onblur="clearHelperText('number-helper')"
+                   oninput="validatePhoneNumber()">
             <span id="number-helper" class="helper-text"></span>
-            <span class="error"><?php echo $numberErr; ?></span>
+            <span class="error" id="number-error"><?php echo $numberErr; ?></span>
         </div>
 
         <div class="form-group">
             <label for="password">Password</label>
             <input type="password" id="password" name="password" 
                    onfocus="showHelperText('password-helper', 'Password must be at least 8 characters with uppercase, lowercase, and numbers')" 
-                   onblur="clearHelperText('password-helper')">
+                   onblur="clearHelperText('password-helper')"
+                   oninput="validatePassword()">
             <span id="password-helper" class="helper-text"></span>
-            <span class="error"><?php echo $passwordErr; ?></span>
+            <span class="error" id="password-error"><?php echo $passwordErr; ?></span>
         </div>
 
         <div class="form-group">
             <label for="confirm-password">Confirm Password</label>
             <input type="password" id="confirm-password" name="confirm-password" 
                    onfocus="showHelperText('confirm-password-helper', 'Re-enter your password')" 
-                   onblur="clearHelperText('confirm-password-helper'); validateConfirmPassword();">
+                   onblur="clearHelperText('confirm-password-helper')"
+                   oninput="validateConfirmPassword()">
             <span id="confirm-password-helper" class="helper-text"></span>
-            <span id="confirm-password-error" class="error"><?php echo $confirmPasswordErr; ?></span>
+            <span class="error" id="confirm-password-error"><?php echo $confirmPasswordErr; ?></span>
         </div>
 
 
@@ -336,15 +341,71 @@ function clearHelperText(elementId) {
     document.getElementById(elementId).textContent = "";
 }
 
+function validateEmail() {
+    const email = document.getElementById("email").value;
+    const errorSpan = document.getElementById("email-error");
+    const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+    if (email.trim() === "") {
+        errorSpan.textContent = "Email is required";
+    } else if (!emailPattern.test(email)) {
+        errorSpan.textContent = "Invalid email format";
+    } else {
+        errorSpan.textContent = "";
+    }
+}
+
+function validatePhoneNumber() {
+    const number = document.getElementById("number").value;
+    const errorSpan = document.getElementById("number-error");
+    const cleanedNumber = number.replace(/\D/g, '');
+
+    if (cleanedNumber === "") {
+        errorSpan.textContent = "Phone number is required";
+    } else if (!['9', '8', '7', '6'].includes(cleanedNumber[0])) {
+        errorSpan.textContent = "Must start with 9, 8, 7, or 6";
+    } else if (cleanedNumber.length !== 10) {
+        errorSpan.textContent = "Must be exactly 10 digits";
+    } else {
+        errorSpan.textContent = "";
+    }
+}
+
+function validatePassword() {
+    const password = document.getElementById("password").value;
+    const errorSpan = document.getElementById("password-error");
+    
+    if (password.trim() === "") {
+        errorSpan.textContent = "Password is required";
+    } else if (password.length < 8) {
+        errorSpan.textContent = "Password must be at least 8 characters";
+    } else if (!/[A-Z]/.test(password)) {
+        errorSpan.textContent = "Password must contain an uppercase letter";
+    } else if (!/[a-z]/.test(password)) {
+        errorSpan.textContent = "Password must contain a lowercase letter";
+    } else if (!/[0-9]/.test(password)) {
+        errorSpan.textContent = "Password must contain a number";
+    } else {
+        errorSpan.textContent = "";
+    }
+    
+    // Validate confirm password when password changes
+    if (document.getElementById("confirm-password").value !== "") {
+        validateConfirmPassword();
+    }
+}
+
 function validateConfirmPassword() {
     const password = document.getElementById("password").value;
     const confirmPassword = document.getElementById("confirm-password").value;
-    const confirmPasswordError = document.getElementById("confirm-password-error");
+    const errorSpan = document.getElementById("confirm-password-error");
 
-    if (confirmPassword && confirmPassword !== password) {
-        confirmPasswordError.textContent = "Passwords do not match";
+    if (confirmPassword.trim() === "") {
+        errorSpan.textContent = "Confirm Password is required";
+    } else if (confirmPassword !== password) {
+        errorSpan.textContent = "Passwords do not match";
     } else {
-        confirmPasswordError.textContent = "";
+        errorSpan.textContent = "";
     }
 }
 
@@ -365,6 +426,24 @@ document.getElementById("number").addEventListener("input", function(e) {
         errorSpan.textContent = "";
     }
 });
+
+function validateUsername() {
+    const username = document.getElementById("username").value;
+    const errorSpan = document.getElementById("username-error");
+    
+    // Check if the username is empty
+    if (username.trim() === "") {
+        errorSpan.textContent = "Username is required";
+    } 
+    // Check if the username contains invalid characters
+    else if (!/^[a-zA-Z-' ]*$/.test(username)) {
+        errorSpan.textContent = "Only letters and spaces are allowed";
+    } else {
+        errorSpan.textContent = ""; // Clear error if valid
+    }
+}
 </script>
 </body>
 </html>
+
+
