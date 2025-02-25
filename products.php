@@ -404,7 +404,7 @@ $result = $stmt->get_result();
                         <span>Brand: <?php echo htmlspecialchars($row['brand']); ?></span>
                     </div>
                     <div class="product-actions">
-                        <a href="product_edit.php?id=<?php echo $row['product_id']; ?>" class="btn btn-success"><i class="fas fa-edit"></i> Edit</a>
+                        <a href="edit_product.php?id=<?php echo $row['product_id']; ?>" class="btn btn-success"><i class="fas fa-edit"></i> Edit</a>
                         <a href="#" class="btn btn-danger delete-btn" data-id="<?php echo $row['product_id']; ?>" data-name="<?php echo htmlspecialchars($row['name']); ?>"><i class="fas fa-trash"></i> Delete</a>
                     </div>
                 </div>

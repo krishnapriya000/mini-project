@@ -471,7 +471,7 @@ session_start();
                 <div class="hero-content">
                     <h1 class="hero-title animate__animated animate__fadeInLeft">Welcome to<br> BabyCubs</h1>
                     <p class="hero-text animate__animated animate__fadeInLeft animate__delay-1s">Discover adorable and comfortable clothing for your little ones</p>
-                    <a href="#" class="btn animate__animated animate__fadeInUp animate__delay-2s">Shop Now</a>
+                    <a href="product_view.php" class="btn animate__animated animate__fadeInUp animate__delay-2s">Shop Now</a>
                 </div>
             </div>
         </div>
