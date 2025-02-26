@@ -309,6 +309,7 @@ $sellersResult = mysqli_query($conn, "SELECT * FROM seller");
         <h2>BabyCubs</h2>
         <ul>
             <li class="active"><a href="#">Dashboard</a></li>
+            <li><a href="index.php">Home</a></li>
             <li><a href="#Manage Users">Manage Users</a></li>
             <li><a href="#Manage Seller">Manage Sellers</a></li>
             <li><a href="manage categories.php">Manage Categories</a></li>
