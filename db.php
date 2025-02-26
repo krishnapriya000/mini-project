@@ -234,9 +234,11 @@ $brand_table = "CREATE TABLE IF NOT EXISTS brand_table (
     brand_id INT AUTO_INCREMENT PRIMARY KEY,
     category_id INT NOT NULL,
     subcategory_id INT NOT NULL,
-    brand_name VARCHAR(100) NOT NULL UNIQUE,
+    brand_name VARCHAR(100) NOT NULL,
+    is_active TINYINT(1) DEFAULT 1, -- Add this line
     FOREIGN KEY (category_id) REFERENCES categories_table(category_id) ON DELETE CASCADE,
-    FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE CASCADE
+    FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_brand_category_subcategory (brand_name, category_id, subcategory_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
 if (!$conn->query($brand_table)) {

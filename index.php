@@ -481,14 +481,7 @@ session_start();
         <div class="container">
             <h2 class="section-title">Shop For Baby</h2>
             <div class="categories-grid">
-                <div class="category-card">
-                    <a href="newborn.php">
-                    <img src="./images/pic.jpg" class="card-img" alt="Clothing">
-                     </a>
-                    <div class="card-body">
-                        <h5>New Born</h5>
-                    </div>
-                </div>
+                
                 <div class="category-card">
                 <a href="">
                     <img src="./images/pic13.jpg" class="card-img" alt="Toys">
@@ -503,6 +496,15 @@ session_start();
                 </a>
                     <div class="card-body">
                         <h5>Baby Girl</h5>
+                    </div>
+                    
+                </div>
+                <div class="category-card">
+                    <a href="newborn.php">
+                    <img src="./images/pic.jpg" class="card-img" alt="Clothing">
+                     </a>
+                    <div class="card-body">
+                        <h5>New Born</h5>
                     </div>
                 </div>
             </div>

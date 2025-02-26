@@ -13,7 +13,7 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Function to validate category/subcategory names (no numbers allowed)
+// Function to validate names (no numbers allowed)
 function validateName($name) {
     return preg_match('/^[A-Za-z ]+$/', $name);
 }
@@ -26,13 +26,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $name = $_POST['name'];
                 $description = $_POST['description'];
                 
-                // Validate category name
                 if (!validateName($name)) {
                     $_SESSION['error'] = "Category name must contain only letters and spaces.";
                     break;
                 }
             
-                // Check if category already exists
                 $checkStmt = $conn->prepare("SELECT * FROM categories_table WHERE name = ?");
                 $checkStmt->bind_param("s", $name);
                 $checkStmt->execute();
@@ -51,72 +49,182 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
-                case 'add_subcategory':
-                    $category_id = $_POST['category_id'];
-                    $subcategory_name = $_POST['subcategory_name'];  // Changed from subcategory_names
-                    $description = $_POST['description'];
-                    
-                    // Validate subcategory name
-                    if (!validateName($subcategory_name)) {
-                        $_SESSION['error'] = "Subcategory names must contain only letters and spaces.";
-                        // continue;
-                    }
-                    
-                    // Check if subcategory already exists under the same category
-                    $checkStmt = $conn->prepare("SELECT * FROM subcategories WHERE category_id = ? AND subcategory_name = ?");
-                    $checkStmt->bind_param("is", $category_id, $subcategory_name);
-                    $checkStmt->execute();
-                    $checkResult = $checkStmt->get_result();
-                    
-                    if ($checkResult->num_rows == 0) {
-                        $stmt = $conn->prepare("INSERT INTO subcategories (category_id, subcategory_name, description) VALUES (?, ?, ?)");
-                        $stmt->bind_param("iss", $category_id, $subcategory_name, $description);
-                        $stmt->execute();
-                    }
+            case 'add_subcategory':
+                $category_id = $_POST['category_id'];
+                $subcategory_name = $_POST['subcategory_name'];
+                $description = $_POST['description'];
                 
-                $_SESSION['message'] = "Subcategories added successfully.";
+                if (!validateName($subcategory_name)) {
+                    $_SESSION['error'] = "Subcategory name must contain only letters and spaces.";
+                    break;
+                }
+                
+                $checkStmt = $conn->prepare("SELECT * FROM subcategories WHERE category_id = ? AND subcategory_name = ?");
+                $checkStmt->bind_param("is", $category_id, $subcategory_name);
+                $checkStmt->execute();
+                $checkResult = $checkStmt->get_result();
+                
+                if ($checkResult->num_rows > 0) {
+                    $_SESSION['error'] = "Subcategory already exists under this category.";
+                } else {
+                    $stmt = $conn->prepare("INSERT INTO subcategories (category_id, subcategory_name, description) VALUES (?, ?, ?)");
+                    $stmt->bind_param("iss", $category_id, $subcategory_name, $description);
+                    if ($stmt->execute()) {
+                        $_SESSION['message'] = "Subcategory added successfully";
+                    } else {
+                        $_SESSION['error'] = "Error adding subcategory: " . $stmt->error;
+                    }
+                }
+                break;
+
+            case 'add_brand':
+                $category_id = $_POST['category_id'];
+                $subcategory_id = $_POST['subcategory_id'];
+                $brand_name = $_POST['brand_name'];
+                
+                if (!validateName($brand_name)) {
+                    $_SESSION['error'] = "Brand name must contain only letters and spaces.";
+                    break;
+                }
+                
+                // Check if the brand already exists under the same category and subcategory
+                $checkStmt = $conn->prepare("SELECT * FROM brand_table WHERE category_id = ? AND subcategory_id = ? AND brand_name = ?");
+                $checkStmt->bind_param("iis", $category_id, $subcategory_id, $brand_name);
+                $checkStmt->execute();
+                $checkResult = $checkStmt->get_result();
+                
+                if ($checkResult->num_rows > 0) {
+                    $_SESSION['error'] = "Brand already exists under this category/subcategory.";
+                } else {
+                    $stmt = $conn->prepare("INSERT INTO brand_table (category_id, subcategory_id, brand_name) VALUES (?, ?, ?)");
+                    $stmt->bind_param("iis", $category_id, $subcategory_id, $brand_name);
+                    if ($stmt->execute()) {
+                        $_SESSION['message'] = "Brand added successfully";
+                    } else {
+                        $_SESSION['error'] = "Error adding brand: " . $stmt->error;
+                    }
+                }
                 break;
 
             case 'add_nested_subcategory':
-                $parent_subcategory_id = $_POST['parent_subcategory_id'];
-                $nested_subcategory_names = $_POST['nested_subcategory_names']; // Expecting an array of nested subcategories
+                $brand_id = $_POST['brand_id'];
+                $subcategory_id = $_POST['subcategory_id']; // This is needed for the relationship
+                $nested_subcategory_name = $_POST['nested_subcategory_name'];
                 $description = $_POST['description'];
                 
-                foreach ($nested_subcategory_names as $nested_subcategory_name) {
-                    // Validate nested subcategory name
-                    if (!validateName($nested_subcategory_name)) {
-                        $_SESSION['error'] = "Nested subcategory names must contain only letters and spaces.";
-                        continue;
-                    }
-                    
-                    // Check if nested subcategory already exists
-                    $checkStmt = $conn->prepare("SELECT * FROM nested_subcategories WHERE parent_subcategory_id = ? AND nested_subcategory_name = ?");
-                    $checkStmt->bind_param("is", $parent_subcategory_id, $nested_subcategory_name);
-                    $checkStmt->execute();
-                    $checkResult = $checkStmt->get_result();
-                    
-                    if ($checkResult->num_rows == 0) {
-                        $stmt = $conn->prepare("INSERT INTO nested_subcategories (parent_subcategory_id, nested_subcategory_name, description) VALUES (?, ?, ?)");
-                        $stmt->bind_param("iss", $parent_subcategory_id, $nested_subcategory_name, $description);
-                        $stmt->execute();
+                if (!validateName($nested_subcategory_name)) {
+                    $_SESSION['error'] = "Nested subcategory name must contain only letters and spaces.";
+                    break;
+                }
+                
+                // Check if nested subcategory exists under this brand
+                $checkStmt = $conn->prepare("SELECT * FROM nested_subcategories WHERE brand_id = ? AND nested_subcategory_name = ?");
+                $checkStmt->bind_param("is", $brand_id, $nested_subcategory_name);
+                $checkStmt->execute();
+                $checkResult = $checkStmt->get_result();
+                
+                if ($checkResult->num_rows > 0) {
+                    $_SESSION['error'] = "Nested subcategory already exists under this brand.";
+                } else {
+                    $stmt = $conn->prepare("INSERT INTO nested_subcategories (subcategory_id, brand_id, nested_subcategory_name, description, is_active) 
+                                           VALUES (?, ?, ?, ?, 1)");
+                    $stmt->bind_param("iiss", $subcategory_id, $brand_id, $nested_subcategory_name, $description);
+                    if ($stmt->execute()) {
+                        $_SESSION['message'] = "Nested subcategory added successfully";
+                    } else {
+                        $_SESSION['error'] = "Error adding nested subcategory: " . $stmt->error;
                     }
                 }
-                $_SESSION['message'] = "Nested subcategories added successfully.";
                 break;
-    
 
+            // Update operations
+            case 'update_category':
+                $category_id = $_POST['category_id'];
+                $name = $_POST['name'];
+                $description = $_POST['description'];
+                
+                if (!validateName($name)) {
+                    $_SESSION['error'] = "Category name must contain only letters and spaces.";
+                    break;
+                }
+                
+                $checkStmt = $conn->prepare("SELECT * FROM categories_table WHERE name = ? AND category_id != ?");
+                $checkStmt->bind_param("si", $name, $category_id);
+                $checkStmt->execute();
+                $checkResult = $checkStmt->get_result();
+                
+                if ($checkResult->num_rows > 0) {
+                    $_SESSION['error'] = "Category name already exists.";
+                } else {
+                    $stmt = $conn->prepare("UPDATE categories_table SET name = ?, description = ? WHERE category_id = ?");
+                    $stmt->bind_param("ssi", $name, $description, $category_id);
+                    if ($stmt->execute()) {
+                        $_SESSION['message'] = "Category updated successfully";
+                    } else {
+                        $_SESSION['error'] = "Error updating category: " . $stmt->error;
+                    }
+                }
+                break;
 
+            case 'update_subcategory':
+                $subcategory_id = $_POST['subcategory_id'];
+                $subcategory_name = $_POST['subcategory_name'];
+                $description = $_POST['description'];
+                
+                if (!validateName($subcategory_name)) {
+                    $_SESSION['error'] = "Subcategory name must contain only letters and spaces.";
+                    break;
+                }
+                
+                $stmt = $conn->prepare("UPDATE subcategories SET subcategory_name = ?, description = ? WHERE id = ?");
+                $stmt->bind_param("ssi", $subcategory_name, $description, $subcategory_id);
+                if ($stmt->execute()) {
+                    $_SESSION['message'] = "Subcategory updated successfully";
+                } else {
+                    $_SESSION['error'] = "Error updating subcategory: " . $stmt->error;
+                }
+                break;
 
+            case 'update_brand':
+                $brand_id = $_POST['brand_id'];
+                $brand_name = $_POST['brand_name'];
+                
+                if (!validateName($brand_name)) {
+                    $_SESSION['error'] = "Brand name must contain only letters and spaces.";
+                    break;
+                }
+                
+                $stmt = $conn->prepare("UPDATE brand_table SET brand_name = ? WHERE brand_id = ?");
+                $stmt->bind_param("si", $brand_name, $brand_id);
+                if ($stmt->execute()) {
+                    $_SESSION['message'] = "Brand updated successfully";
+                } else {
+                    $_SESSION['error'] = "Error updating brand: " . $stmt->error;
+                }
+                break;
 
+            case 'update_nested_subcategory':
+                $nested_id = $_POST['nested_id'];
+                $nested_name = $_POST['nested_name'];
+                $description = $_POST['description'];
+                
+                if (!validateName($nested_name)) {
+                    $_SESSION['error'] = "Nested subcategory name must contain only letters and spaces.";
+                    break;
+                }
+                
+                $stmt = $conn->prepare("UPDATE nested_subcategories SET nested_subcategory_name = ?, description = ? WHERE id = ?");
+                $stmt->bind_param("ssi", $nested_name, $description, $nested_id);
+                if ($stmt->execute()) {
+                    $_SESSION['message'] = "Nested subcategory updated successfully";
+                } else {
+                    $_SESSION['error'] = "Error updating nested subcategory: " . $stmt->error;
+                }
+                break;
 
-
-
-
-
+            // Delete operations
             case 'soft_delete_category':
                 $category_id = $_POST['category_id'];
-                
-                // Start transaction
                 $conn->begin_transaction();
                 try {
                     // Deactivate category
@@ -124,13 +232,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->bind_param("i", $category_id);
                     $stmt->execute();
                     
-                    // Deactivate all related subcategories
+                    // Deactivate related subcategories
                     $stmt = $conn->prepare("UPDATE subcategories SET is_active = 0 WHERE category_id = ?");
                     $stmt->bind_param("i", $category_id);
                     $stmt->execute();
                     
+                    // Deactivate related brands
+                    $stmt = $conn->prepare("UPDATE brand_table SET is_active = 0 
+                                        WHERE subcategory_id IN 
+                                        (SELECT id FROM subcategories WHERE category_id = ?)");
+                    $stmt->bind_param("i", $category_id);
+                    $stmt->execute();
+                    
+                    // Deactivate related nested subcategories
+                    $stmt = $conn->prepare("UPDATE nested_subcategories SET is_active = 0 
+                                         WHERE brand_id IN 
+                                         (SELECT brand_id FROM brand_table WHERE category_id = ?)");
+                    $stmt->bind_param("i", $category_id);
+                    $stmt->execute();
+                    
                     $conn->commit();
-                    $_SESSION['message'] = "Category and its subcategories have been deactivated";
+                    $_SESSION['message'] = "Category and related items deactivated successfully";
                 } catch (Exception $e) {
                     $conn->rollback();
                     $_SESSION['error'] = "Error deactivating category: " . $e->getMessage();
@@ -139,86 +261,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             case 'soft_delete_subcategory':
                 $subcategory_id = $_POST['subcategory_id'];
-                $stmt = $conn->prepare("UPDATE subcategories SET is_active = 0 WHERE id = ?");
-                $stmt->bind_param("i", $subcategory_id);
-                if ($stmt->execute()) {
-                    $_SESSION['message'] = "Subcategory has been deactivated";
-                } else {
-                    $_SESSION['error'] = "Error deactivating subcategory: " . $stmt->error;
+                $conn->begin_transaction();
+                try {
+                    // Deactivate subcategory
+                    $stmt = $conn->prepare("UPDATE subcategories SET is_active = 0 WHERE id = ?");
+                    $stmt->bind_param("i", $subcategory_id);
+                    $stmt->execute();
+                    
+                    // Deactivate related brands
+                    $stmt = $conn->prepare("UPDATE brand_table SET is_active = 0 WHERE subcategory_id = ?");
+                    $stmt->bind_param("i", $subcategory_id);
+                    $stmt->execute();
+                    
+                    // Deactivate related nested subcategories
+                    $stmt = $conn->prepare("UPDATE nested_subcategories SET is_active = 0 
+                                         WHERE brand_id IN 
+                                         (SELECT brand_id FROM brand_table WHERE subcategory_id = ?)");
+                    $stmt->bind_param("i", $subcategory_id);
+                    $stmt->execute();
+                    
+                    $conn->commit();
+                    $_SESSION['message'] = "Subcategory and related items deactivated successfully";
+                } catch (Exception $e) {
+                    $conn->rollback();
+                    $_SESSION['error'] = "Error deactivating subcategory: " . $e->getMessage();
                 }
                 break;
 
-                case 'update_category':
-                    $category_id = $_POST['category_id'];
-                    $name = $_POST['name'];
-                    $description = $_POST['description'];
-                
-                    // Check if the new name already exists (excluding the current category)
-                    $checkStmt = $conn->prepare("SELECT * FROM categories_table WHERE name = ? AND category_id != ?");
-                    $checkStmt->bind_param("si", $name, $category_id);
-                    $checkStmt->execute();
-                    $checkResult = $checkStmt->get_result();
-                
-                    if ($checkResult->num_rows > 0) {
-                        $_SESSION['error'] = "Category name already exists.";
-                    } else {
-                        $stmt = $conn->prepare("UPDATE categories_table SET name = ?, description = ? WHERE category_id = ?");
-                        $stmt->bind_param("ssi", $name, $description, $category_id);
-                        if ($stmt->execute()) {
-                            $_SESSION['message'] = "Category updated successfully";
-                        } else {
-                            $_SESSION['error'] = "Error updating category: " . $stmt->error;
-                        }
-                    }
-                    break;
+            case 'delete_brand':
+                $brand_id = $_POST['brand_id'];
+                $conn->begin_transaction();
+                try {
+                    // Deactivate brand
+                    $stmt = $conn->prepare("UPDATE brand_table SET is_active = 0 WHERE brand_id = ?");
+                    $stmt->bind_param("i", $brand_id);
+                    $stmt->execute();
+                    
+                    // Deactivate related nested subcategories
+                    $stmt = $conn->prepare("UPDATE nested_subcategories SET is_active = 0 WHERE brand_id = ?");
+                    $stmt->bind_param("i", $brand_id);
+                    $stmt->execute();
+                    
+                    $conn->commit();
+                    $_SESSION['message'] = "Brand and related nested subcategories deactivated successfully";
+                } catch (Exception $e) {
+                    $conn->rollback();
+                    $_SESSION['error'] = "Error deactivating brand: " . $e->getMessage();
+                }
+                break;
 
-                    case 'update_subcategory':
-                        $subcategory_id = $_POST['subcategory_id'];
-                        $subcategory_name = $_POST['subcategory_name'];
-                        $description = $_POST['description'];
-                    
-                        // Check if the new subcategory name already exists under the same category (excluding the current subcategory)
-                        $checkStmt = $conn->prepare("SELECT * FROM subcategories WHERE subcategory_name = ? AND category_id = (SELECT category_id FROM subcategories WHERE id = ?) AND id != ?");
-                        $checkStmt->bind_param("sii", $subcategory_name, $subcategory_id, $subcategory_id);
-                        $checkStmt->execute();
-                        $checkResult = $checkStmt->get_result();
-                    
-                        if ($checkResult->num_rows > 0) {
-                            $_SESSION['error'] = "Subcategory name already exists under this category.";
-                        } else {
-                            $stmt = $conn->prepare("UPDATE subcategories SET subcategory_name = ?, description = ? WHERE id = ?");
-                            $stmt->bind_param("ssi", $subcategory_name, $description, $subcategory_id);
-                            if ($stmt->execute()) {
-                                $_SESSION['message'] = "Subcategory updated successfully";
-                            } else {
-                                $_SESSION['error'] = "Error updating subcategory: " . $stmt->error;
-                            }
-                        }
-                        break;
+            case 'delete_nested_subcategory':
+                $nested_id = $_POST['nested_id'];
+                $stmt = $conn->prepare("UPDATE nested_subcategories SET is_active = 0 WHERE id = ?");
+                $stmt->bind_param("i", $nested_id);
+                if ($stmt->execute()) {
+                    $_SESSION['message'] = "Nested subcategory deactivated successfully";
+                } else {
+                    $_SESSION['error'] = "Error deactivating nested subcategory: " . $stmt->error;
+                }
+                break;
         }
-        // header("Location: category_admin.php");
-        // exit();
     }
 }
-// Fetch categories and subcategories for the sidebar
-$sidebarCategoriesQuery = "SELECT c.category_id, c.name as category_name, s.id as subcategory_id, s.subcategory_name 
-                           FROM categories_table c 
-                           LEFT JOIN subcategories s ON c.category_id = s.category_id 
-                           WHERE c.is_active = 1 AND (s.is_active = 1 OR s.is_active IS NULL)
-                           ORDER BY c.name, s.subcategory_name";
-$sidebarCategoriesResult = mysqli_query($conn, $sidebarCategoriesQuery);
 
+// Fetch all active categories with their subcategories, nested subcategories, and brands
+$query = "
+    SELECT 
+        c.category_id, c.name as category_name, c.description as category_description,
+        s.id as subcategory_id, s.subcategory_name, s.description as subcategory_description,
+        b.brand_id, b.brand_name,
+        ns.id as nested_id, ns.nested_subcategory_name, ns.description as nested_description
+    FROM categories_table c
+    LEFT JOIN subcategories s ON c.category_id = s.category_id AND s.is_active = 1
+    LEFT JOIN brand_table b ON s.id = b.subcategory_id AND b.is_active = 1
+    LEFT JOIN nested_subcategories ns ON s.id = ns.parent_subcategory_id AND ns.is_active = 1
+    WHERE c.is_active = 1
+    ORDER BY c.name, s.subcategory_name, b.brand_name, ns.nested_subcategory_name
+";
+$result = $conn->query($query);
 
-// Fetch categories and subcategories
-$categoriesQuery = "SELECT * FROM categories_table WHERE is_active = 1 ORDER BY name";
-$categoriesResult = mysqli_query($conn, $categoriesQuery);
+if (!$result) {
+    die("Query failed: " . $conn->error);
+}
 
-$subcategoriesQuery = "SELECT s.*, c.name as category_name 
-                      FROM subcategories s 
-                      JOIN categories_table c ON s.category_id = c.category_id 
-                      WHERE s.is_active = 1 AND c.is_active = 1
-                      ORDER BY c.name, s.subcategory_name";
-$subcategoriesResult = mysqli_query($conn, $subcategoriesQuery);
+// Fetch category or subcategory details based on ID
+$selected_category = null;
+$selected_subcategory = null;
+
+if (isset($_GET['category_id'])) {
+    $category_id = intval($_GET['category_id']);
+    $stmt = $conn->prepare("SELECT * FROM categories_table WHERE category_id = ?");
+    $stmt->bind_param("i", $category_id);
+    $stmt->execute();
+    $selected_category = $stmt->get_result()->fetch_assoc();
+}
+
+if (isset($_GET['subcategory_id'])) {
+    $subcategory_id = intval($_GET['subcategory_id']);
+    $stmt = $conn->prepare("SELECT * FROM subcategories WHERE id = ?");
+    $stmt->bind_param("i", $subcategory_id);
+    $stmt->execute();
+    $selected_subcategory = $stmt->get_result()->fetch_assoc();
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -298,6 +443,27 @@ $subcategoriesResult = mysqli_query($conn, $subcategoriesQuery);
             margin-bottom: 20px;
         }
 
+
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .subcategory-list {
+            margin-left: 30px;
+            border-left: 2px solid #007bff;
+            padding-left: 15px;
+        }
+
+        .subcategory-item {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
         .form-group {
             margin-bottom: 15px;
         }
@@ -355,6 +521,32 @@ $subcategoriesResult = mysqli_query($conn, $subcategoriesQuery);
             border-radius: 4px;
         }
 
+        .brand-list {
+            margin-left: 30px;
+            border-left: 2px solid #ffc107;
+            padding-left: 15px;
+        }
+        
+        .brand-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #fff3e0;
+            border-radius: 4px;
+        }
+        
+        .nested-subcategory-list {
+            margin-left: 30px;
+            border-left: 2px solid #28a745;
+            padding-left: 15px;
+        }
+        
+        .nested-subcategory-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 4px;
+        }
+
         .action-buttons {
             display: flex;
             gap: 10px;
@@ -402,6 +594,27 @@ $subcategoriesResult = mysqli_query($conn, $subcategoriesQuery);
             cursor: pointer;
             font-size: 24px;
         }
+        
+        .nav-breadcrumb {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+        
+        .add-buttons {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .hierarchy-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
     </style>
 </head>
 <body>
@@ -412,29 +625,36 @@ $subcategoriesResult = mysqli_query($conn, $subcategoriesQuery);
             <li><a href="index.php"><i class="fas fa-home"></i> Home</a></li>
             <li><a href="admindashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
             <li>
-            <a href="#" onclick="toggleDropdown('categories-dropdown')">
+                <a href="#" onclick="toggleDropdown('categories-dropdown')">
                     <i class="fas fa-list"></i> Categories <i class="fas fa-chevron-down"></i>
                 </a>
                 <div class="dropdown-content" id="categories-dropdown">
                     <?php
-                    if ($sidebarCategoriesResult && mysqli_num_rows($sidebarCategoriesResult) > 0) {
-                        $currentCategory = null;
-                        while ($row = mysqli_fetch_assoc($sidebarCategoriesResult)) {
-                            if ($currentCategory !== $row['category_name']) {
-                                if ($currentCategory !== null) {
-                                    echo "</div>"; // Close previous subcategory list
+                    if ($result && mysqli_num_rows($result) > 0) {
+                        $current_category = null;
+                        $current_subcategory = null;
+                        mysqli_data_seek($result, 0);
+
+                        while ($row = mysqli_fetch_assoc($result)) {
+                            // Category level
+                            if ($current_category !== $row['category_name']) {
+                                if ($current_category !== null) {
+                                    echo "</div></div>";
                                 }
                                 echo "<div class='category-item'>";
-                                echo "<strong>" . htmlspecialchars($row['category_name']) . "</strong>";
+                                echo "<a href='#category-{$row['category_id']}'>" . htmlspecialchars($row['category_name']) . "</a>";
                                 echo "<div class='subcategory-list'>";
-                                $currentCategory = $row['category_name'];
+                                $current_category = $row['category_name'];
                             }
-                            if ($row['subcategory_name']) {
-                                echo "<a href='#'>" . htmlspecialchars($row['subcategory_name']) . "</a>";
+                            
+                            // Subcategory level
+                            if ($row['subcategory_id'] && $current_subcategory !== $row['subcategory_name']) {
+                                echo "<a href='#subcategory-{$row['subcategory_id']}'>" . htmlspecialchars($row['subcategory_name']) . "</a>";
+                                $current_subcategory = $row['subcategory_name'];
                             }
                         }
-                        if ($currentCategory !== null) {
-                            echo "</div></div>"; // Close the last category and subcategory list
+                        if ($current_category !== null) {
+                            echo "</div></div>";
                         }
                     } else {
                         echo "<p>No categories found</p>";
@@ -448,32 +668,31 @@ $subcategoriesResult = mysqli_query($conn, $subcategoriesQuery);
 
     <!-- Main Content -->
     <div class="main-content">
-    <?php if (isset($_SESSION['message'])): ?>
-    <div class="message success">
-        <?php 
-            echo $_SESSION['message'];
-            unset($_SESSION['message']);
-        ?>
-    </div>
-<?php endif; ?>
+        <?php if (isset($_SESSION['message'])): ?>
+            <div class="message success"><?php echo $_SESSION['message']; unset($_SESSION['message']); ?></div>
+        <?php endif; ?>
+        
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="message error"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
+        <?php endif; ?>
+        
+        <!-- <div class="hierarchy-info">
+            <h3>Category Hierarchy</h3>
+            <p>Categories → Subcategories → Brands → Nested Subcategories</p>
+        </div> -->
 
-<?php if (isset($_SESSION['error'])): ?>
-    <div class="message error">
-        <?php 
-            echo $_SESSION['error'];
-            unset($_SESSION['error']);
-        ?>
-    </div>
-<?php endif; ?>
 
+ 
+
+        <!-- Add Category Form -->
         <div class="card">
-            <h2>Add New Category</h2><br><br>
+            <h2>Add New Category</h2>
             <form method="POST">
                 <input type="hidden" name="action" value="add_category">
                 <div class="form-group">
-    <label>Subcategory Name</label>
-    <input type="text" name="subcategory_name" required>
-</div>
+                    <label>Category Name</label>
+                    <input type="text" name="name" required>
+                </div>
                 <div class="form-group">
                     <label>Description</label>
                     <textarea name="description" required></textarea>
@@ -482,58 +701,205 @@ $subcategoriesResult = mysqli_query($conn, $subcategoriesQuery);
             </form>
         </div>
 
-        <!-- Category and Subcategory Display -->
+        <!-- Categories Display -->
         <div class="card">
-            <h2>Categories and Subcategories</h2><br><br>
+            <h2>Categories and Hierarchy</h2>
             <?php
-            if ($categoriesResult && mysqli_num_rows($categoriesResult) > 0) {
-                while ($category = mysqli_fetch_assoc($categoriesResult)) {
-                    echo "<div class='category-section'>";
+            if ($result && mysqli_num_rows($result) > 0) {
+                $categories = array();
+                $subcategories = array();
+                $brands = array();
+                $nested_subcategories = array();
+                
+                // Organize data
+                mysqli_data_seek($result, 0);
+                while ($row = mysqli_fetch_assoc($result)) {
+                    $cat_id = $row['category_id'];
+                    $subcat_id = $row['subcategory_id'];
+                    $brand_id = $row['brand_id'];
+                    $nested_id = $row['nested_id'];
+                    
+                    // Add category
+                    if (!isset($categories[$cat_id]) && $cat_id) {
+                        $categories[$cat_id] = array(
+                            'name' => $row['category_name'],
+                            'description' => $row['category_description']
+                        );
+                    }
+                    
+                    // Add subcategory
+                    if (!isset($subcategories[$subcat_id]) && $subcat_id) {
+                        $subcategories[$subcat_id] = array(
+                            'name' => $row['subcategory_name'],
+                            'description' => $row['subcategory_description'],
+                            'category_id' => $cat_id
+                        );
+                    }
+                    
+                    // Add brand
+                    if (!isset($brands[$brand_id]) && $brand_id) {
+                        $brands[$brand_id] = array(
+                            'name' => $row['brand_name'],
+                            'subcategory_id' => $subcat_id,
+                            'category_id' => $cat_id
+                        );
+                    }
+                    
+                    // Add nested subcategory
+                    if (!isset($nested_subcategories[$nested_id]) && $nested_id) {
+                        $nested_subcategories[$nested_id] = array(
+                            'name' => $row['nested_subcategory_name'],
+                            'description' => $row['nested_description'],
+                            'brand_id' => $brand_id,
+                            'subcategory_id' => $subcat_id
+                        );
+                    }
+                }
+                
+                // Display hierarchy
+                foreach ($categories as $cat_id => $category) {
+                    echo "<div class='category-section' id='category-{$cat_id}'>";
                     echo "<div class='category-header'>";
                     echo "<h3>" . htmlspecialchars($category['name']) . "</h3>";
                     echo "<div class='action-buttons'>";
-                    echo "<button onclick='showEditCategoryModal({$category['category_id']}, \"" . htmlspecialchars($category['name']) . "\", \"" . htmlspecialchars($category['description']) . "\")' class='btn btn-edit'>Edit</button>";
-                    echo "<button onclick='showAddSubcategoryModal({$category['category_id']}, \"" . htmlspecialchars($category['name']) . "\")' class='btn btn-primary'>Add Subcategory</button>";
+                    echo "<button onclick='showEditCategoryModal({$cat_id}, \"" . htmlspecialchars($category['name']) . "\", \"" . htmlspecialchars($category['description']) . "\")' class='btn btn-edit'>Edit</button>";
+                    echo "<button onclick='showAddSubcategoryModal({$cat_id}, \"" . htmlspecialchars($category['name']) . "\")' class='btn btn-primary'>Add Subcategory</button>";
                     echo "<form method='POST' style='display: inline;'>";
                     echo "<input type='hidden' name='action' value='soft_delete_category'>";
-                    echo "<input type='hidden' name='category_id' value='{$category['category_id']}'>";
-                    echo "<button type='submit' class='btn btn-danger' onclick='return confirm(\"Are you sure you want to deactivate this category and all its subcategories?\")'>Delete</button>";
+                    echo "<input type='hidden' name='category_id' value='{$cat_id}'>";
+                    echo "<button type='submit' class='btn btn-danger' onclick='return confirm(\"Are you sure? This will deactivate all related items.\")'>Delete</button>";
                     echo "</form>";
                     echo "</div></div>";
                     echo "<p>" . htmlspecialchars($category['description']) . "</p>";
                     
                     // Display subcategories
-                    if ($subcategoriesResult) {
-                        mysqli_data_seek($subcategoriesResult, 0);
-                        echo "<div class='subcategory-list'>";
-                        $hasSubcategories = false;
-                        while ($subcategory = mysqli_fetch_assoc($subcategoriesResult)) {
-                            if ($subcategory['category_id'] == $category['category_id']) {
-                                $hasSubcategories = true;
-                                echo "<div class='subcategory-item'>";
-                                echo "<strong>" . htmlspecialchars($subcategory['subcategory_name']) . "</strong>";
-                                echo "<p>" . htmlspecialchars($subcategory['description']) . "</p>";
-                                echo "<div class='action-buttons'>";
-                                echo "<button onclick='showEditSubcategoryModal({$subcategory['id']}, \"" . htmlspecialchars($subcategory['subcategory_name']) . "\", \"" . htmlspecialchars($subcategory['description']) . "\")' class='btn btn-edit'>Edit</button>";
-                                echo "<form method='POST' style='display: inline;'>";
-                                echo "<input type='hidden' name='action' value='soft_delete_subcategory'>";
-                                echo "<input type='hidden' name='subcategory_id' value='{$subcategory['id']}'>";
-                                echo "<button type='submit' class='btn btn-danger' onclick='return confirm(\"Are you sure you want to deactivate this subcategory?\")'>Delete</button>";
-                                echo "</form>";
-                                echo "</div></div>";
+                    echo "<div class='subcategory-list'>";
+                    foreach ($subcategories as $subcat_id => $subcategory) {
+                        if ($subcategory['category_id'] == $cat_id) {
+                            echo "<div class='subcategory-item' id='subcategory-{$subcat_id}'>";
+                            echo "<strong>" . htmlspecialchars($subcategory['name']) . "</strong>";
+                            echo "<p>" . htmlspecialchars($subcategory['description']) . "</p>";
+                            echo "<div class='action-buttons'>";
+                            echo "<button onclick='showEditSubcategoryModal({$subcat_id}, \"" . htmlspecialchars($subcategory['name']) . "\", \"" . htmlspecialchars($subcategory['description']) . "\")' class='btn btn-edit'>Edit</button>";
+                            echo "<button onclick='showAddBrandModal({$cat_id}, {$subcat_id})' class='btn btn-primary'>Add Brand</button>";
+                            echo "<form method='POST' style='display: inline;'>";
+                            echo "<input type='hidden' name='action' value='soft_delete_subcategory'>";
+                            echo "<input type='hidden' name='subcategory_id' value='{$subcat_id}'>";
+                            echo "<button type='submit' class='btn btn-danger' onclick='return confirm(\"Are you sure? This will deactivate all related brands and nested subcategories.\")'>Delete</button>";
+                            echo "</form>";
+                            echo "</div>";
+                            
+                            // Display brands
+                            echo "<div class='brand-list'>";
+                            foreach ($brands as $brand_id => $brand) {
+                                if ($brand['subcategory_id'] == $subcat_id) {
+                                    echo "<div class='brand-item' id='brand-{$brand_id}'>";
+                                    echo "<strong>" . htmlspecialchars($brand['name']) . "</strong>";
+                                    echo "<div class='action-buttons'>";
+                                    echo "<button onclick='showEditBrandModal({$brand_id}, \"" . htmlspecialchars($brand['name']) . "\")' class='btn btn-edit'>Edit</button>";
+                                    echo "<button onclick='showAddNestedSubcategoryModal({$brand_id}, {$subcat_id})' class='btn btn-primary'>Add Nested Subcategory</button>";
+                                    echo "<form method='POST' style='display: inline;'>";
+                                    echo "<input type='hidden' name='action' value='delete_brand'>";
+                                    echo "<input type='hidden' name='brand_id' value='{$brand_id}'>";
+                                    echo "<button type='submit' class='btn btn-danger' onclick='return confirm(\"Are you sure? This will deactivate all related nested subcategories.\")'>Delete</button>";
+                                    echo "</form>";
+                                    echo "</div>";
+                                    
+                                    // Display nested subcategories
+                                    echo "<div class='nested-subcategory-list'>";
+                                    foreach ($nested_subcategories as $nested_id => $nested_subcategory) {
+                                        if ($nested_subcategory['brand_id'] == $brand_id) {
+                                            echo "<div class='nested-subcategory-item' id='nested-{$nested_id}'>";
+                                            echo "<strong>" . htmlspecialchars($nested_subcategory['name']) . "</strong>";
+                                            echo "<p>" . htmlspecialchars($nested_subcategory['description']) . "</p>";
+                                            echo "<div class='action-buttons'>";
+                                            echo "<button onclick='showEditNestedSubcategoryModal({$nested_id}, \"" . htmlspecialchars($nested_subcategory['name']) . "\", \"" . htmlspecialchars($nested_subcategory['description']) . "\")' class='btn btn-edit'>Edit</button>";
+                                            echo "<form method='POST' style='display: inline;'>";
+                                            echo "<input type='hidden' name='action' value='delete_nested_subcategory'>";
+                                            echo "<input type='hidden' name='nested_id' value='{$nested_id}'>";
+                                            echo "<button type='submit' class='btn btn-danger' onclick='return confirm(\"Are you sure? This will deactivate the nested subcategory.\")'>Delete</button>";
+                                            echo "</form>";
+                                            echo "</div>";
+                                            echo "</div>";
+                                        }
+                                    }
+                                    echo "</div>"; // Close nested-subcategory-list
+                                    echo "</div>"; // Close brand-item
+                                }
                             }
+                            echo "</div>"; // Close brand-list
+                            echo "</div>"; // Close subcategory-item
                         }
-                        if (!$hasSubcategories) {
-                            echo "<p>No subcategories yet</p>";
-                        }
-                        echo "</div>";
                     }
-                    echo "</div>";
+                    echo "</div>"; // Close subcategory-list
+                    echo "</div>"; // Close category-section
                 }
             } else {
-                echo "<p>No categories found</p>";
+                echo "<p>No categories found.</p>";
             }
             ?>
+        </div>
+    </div>
+
+    <!-- Modals for Adding and Editing -->
+    <!-- Add Subcategory Modal -->
+    <div id="addSubcategoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addSubcategoryModal')">&times;</span>
+            <h2>Add Subcategory</h2>
+            <form method="POST">
+                <input type="hidden" name="action" value="add_subcategory">
+                <input type="hidden" name="category_id" id="addSubcategoryCategoryId">
+                <div class="form-group">
+                    <label>Subcategory Name</label>
+                    <input type="text" name="subcategory_name" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Subcategory</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Brand Modal -->
+    <div id="addBrandModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addBrandModal')">&times;</span>
+            <h2>Add Brand</h2>
+            <form method="POST">
+                <input type="hidden" name="action" value="add_brand">
+                <input type="hidden" name="category_id" id="addBrandCategoryId">
+                <input type="hidden" name="subcategory_id" id="addBrandSubcategoryId">
+                <div class="form-group">
+                    <label>Brand Name</label>
+                    <input type="text" name="brand_name" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Brand</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Nested Subcategory Modal -->
+    <div id="addNestedSubcategoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addNestedSubcategoryModal')">&times;</span>
+            <h2>Add Nested Subcategory</h2>
+            <form method="POST">
+                <input type="hidden" name="action" value="add_nested_subcategory">
+                <input type="hidden" name="brand_id" id="addNestedSubcategoryBrandId">
+                <input type="hidden" name="subcategory_id" id="addNestedSubcategorySubcategoryId">
+                <div class="form-group">
+                    <label>Nested Subcategory Name</label>
+                    <input type="text" name="nested_subcategory_name" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Nested Subcategory</button>
+            </form>
         </div>
     </div>
 
@@ -544,14 +910,14 @@ $subcategoriesResult = mysqli_query($conn, $subcategoriesQuery);
             <h2>Edit Category</h2>
             <form method="POST">
                 <input type="hidden" name="action" value="update_category">
-                <input type="hidden" name="category_id" id="edit_category_id">
+                <input type="hidden" name="category_id" id="editCategoryId">
                 <div class="form-group">
                     <label>Category Name</label>
-                    <input type="text" name="name" id="edit_category_name" required>
+                    <input type="text" name="name" id="editCategoryName" required>
                 </div>
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea name="description" id="edit_category_description" required></textarea>
+                    <textarea name="description" id="editCategoryDescription" required></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary">Update Category</button>
             </form>
@@ -565,70 +931,112 @@ $subcategoriesResult = mysqli_query($conn, $subcategoriesQuery);
             <h2>Edit Subcategory</h2>
             <form method="POST">
                 <input type="hidden" name="action" value="update_subcategory">
-                <input type="hidden" name="subcategory_id" id="edit_subcategory_id">
+                <input type="hidden" name="subcategory_id" id="editSubcategoryId">
                 <div class="form-group">
                     <label>Subcategory Name</label>
-                    <input type="text" name="subcategory_name" id="edit_subcategory_name" required>
+                    <input type="text" name="subcategory_name" id="editSubcategoryName" required>
                 </div>
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea name="description" id="edit_subcategory_description" required></textarea>
+                    <textarea name="description" id="editSubcategoryDescription" required></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary">Update Subcategory</button>
             </form>
         </div>
     </div>
 
-    <!-- Add Subcategory Modal -->
-    <div id="addSubcategoryModal" class="modal">
+    <!-- Edit Brand Modal -->
+    <div id="editBrandModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal('addSubcategoryModal')">&times;</span>
-            <h2>Add New Subcategory</h2>
+            <span class="close" onclick="closeModal('editBrandModal')">&times;</span>
+            <h2>Edit Brand</h2>
             <form method="POST">
-                <input type="hidden" name="action" value="add_subcategory">
-                <input type="hidden" name="category_id" id="subcategory_parent_id">
+                <input type="hidden" name="action" value="update_brand">
+                <input type="hidden" name="brand_id" id="editBrandId">
                 <div class="form-group">
-                    <label>Parent Category</label>
-                    <input type="text" id="subcategory_parent_name" disabled>
+                    <label>Brand Name</label>
+                    <input type="text" name="brand_name" id="editBrandName" required>
                 </div>
-                <div class="form-group">
-                    <label>Subcategory Name</label>
-                    <input type="text" name="subcategory_name" required>
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea name="description" required></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary">Add Subcategory</button>
+                <button type="submit" class="btn btn-primary">Update Brand</button>
             </form>
         </div>
     </div>
+
+    <!-- Edit Nested Subcategory Modal -->
+    <div id="editNestedSubcategoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editNestedSubcategoryModal')">&times;</span>
+            <h2>Edit Nested Subcategory</h2>
+            <form method="POST">
+                <input type="hidden" name="action" value="update_nested_subcategory">
+                <input type="hidden" name="nested_id" id="editNestedSubcategoryId">
+                <div class="form-group">
+                    <label>Nested Subcategory Name</label>
+                    <input type="text" name="nested_name" id="editNestedSubcategoryName" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" id="editNestedSubcategoryDescription" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Nested Subcategory</button>
+            </form>
+        </div>
+    </div>
+
     <script>
-        function toggleDropdown(id) {
+
+
+// JavaScript function to toggle dropdown
+function toggleDropdown(id) {
             const dropdown = document.getElementById(id);
             dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
         }
-
+        // Function to show modals
         function showAddSubcategoryModal(categoryId, categoryName) {
-            document.getElementById('subcategory_parent_id').value = categoryId;
-            document.getElementById('subcategory_parent_name').value = categoryName;
+            document.getElementById('addSubcategoryCategoryId').value = categoryId;
             document.getElementById('addSubcategoryModal').style.display = 'block';
         }
 
-        function showEditCategoryModal(categoryId, name, description) {
-            document.getElementById('edit_category_id').value = categoryId;
-            document.getElementById('edit_category_name').value = name;
-            document.getElementById('edit_category_description').value = description;
+        function showAddBrandModal(categoryId, subcategoryId) {
+            document.getElementById('addBrandCategoryId').value = categoryId;
+            document.getElementById('addBrandSubcategoryId').value = subcategoryId;
+            document.getElementById('addBrandModal').style.display = 'block';
+        }
+
+        function showAddNestedSubcategoryModal(brandId, subcategoryId) {
+            document.getElementById('addNestedSubcategoryBrandId').value = brandId;
+            document.getElementById('addNestedSubcategorySubcategoryId').value = subcategoryId;
+            document.getElementById('addNestedSubcategoryModal').style.display = 'block';
+        }
+
+        function showEditCategoryModal(categoryId, categoryName, categoryDescription) {
+            document.getElementById('editCategoryId').value = categoryId;
+            document.getElementById('editCategoryName').value = categoryName;
+            document.getElementById('editCategoryDescription').value = categoryDescription;
             document.getElementById('editCategoryModal').style.display = 'block';
         }
 
-        function showEditSubcategoryModal(subcategoryId, name, description) {
-            document.getElementById('edit_subcategory_id').value = subcategoryId;
-            document.getElementById('edit_subcategory_name').value = name;
-            document.getElementById('edit_subcategory_description').value = description;
+        function showEditSubcategoryModal(subcategoryId, subcategoryName, subcategoryDescription) {
+            document.getElementById('editSubcategoryId').value = subcategoryId;
+            document.getElementById('editSubcategoryName').value = subcategoryName;
+            document.getElementById('editSubcategoryDescription').value = subcategoryDescription;
             document.getElementById('editSubcategoryModal').style.display = 'block';
         }
 
+        function showEditBrandModal(brandId, brandName) {
+            document.getElementById('editBrandId').value = brandId;
+            document.getElementById('editBrandName').value = brandName;
+            document.getElementById('editBrandModal').style.display = 'block';
+        }
+
+        function showEditNestedSubcategoryModal(nestedId, nestedName, nestedDescription) {
+            document.getElementById('editNestedSubcategoryId').value = nestedId;
+            document.getElementById('editNestedSubcategoryName').value = nestedName;
+            document.getElementById('editNestedSubcategoryDescription').value = nestedDescription;
+            document.getElementById('editNestedSubcategoryModal').style.display = 'block';
+        }
+
+        // Function to close modals
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
         }
