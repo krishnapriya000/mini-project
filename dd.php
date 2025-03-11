@@ -110,6 +110,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             height: 100vh;
             padding: 20px 0;
             position: fixed;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #3d3f54 #2b2d42;
         }
 
         .brand-name {
@@ -126,12 +129,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .nav-item {
             padding: 10px 20px;
             cursor: pointer;
+            transition: all 0.3s ease;
         }
 
         .nav-item a {
             color: white;
             text-decoration: none;
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .nav-item:hover {
@@ -140,6 +146,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .nav-item.active {
             background-color: #3d3f54;
+            border-left: 4px solid #fff;
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .nav-item a i {
+            margin-right: 10px;
+        }
+
+        /* Add this if you want to ensure proper spacing between icon and text */
+        .fa-layer-group {
+            font-size: 0.9em; /* Slightly smaller icon for better alignment */
+        }
+
+        /* Webkit scrollbar styles */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: #2b2d42;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: #3d3f54;
+            border-radius: 3px;
         }
 
         /* Main Content Styles */
@@ -270,20 +305,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-<div class="sidebar">
-    <div class="brand-name">BabyCubs</div>
-    <ul class="nav-items">
-        <li class="nav-item active">
-            <a href="dd.php"><i class="fas fa-list"></i> Categories</a>
-        </li>
-        <li class="nav-item">
-            <a href="subcategories.php"><i class="fas fa-sitemap"></i> Subcategories</a>
-        </li>
-        <li class="nav-item">
-            <a href="index.php"><i class="fas fa-arrow-left"></i> Back</a>
-        </li>
-    </ul>
-</div>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="brand-name">BabyCubs</div>
+        <ul class="nav-items">
+            <li class="nav-item active">
+                <a href="dd.php"><i class="fas fa-list"></i> Categories</a>
+            </li>
+            <li class="nav-item">
+                <a href="subcategories.php"><i class="fas fa-sitemap"></i> Subcategories</a>
+            </li>
+            <li class="nav-item">
+                <a href="brand.php"><i class="fas fa-tag"></i> Brands</a>
+            </li>
+            <li class="nav-item">
+                <a href="nested_subcategories.php"><i class="fas fa-layer-group"></i> Nested Subcategories</a>
+            </li>
+            <li class="nav-item">
+                <a href="index.php"><i class="fas fa-arrow-left"></i> Back</a>
+            </li>
+        </ul>
+    </div>
 
     <!-- Main Content -->
     <div class="main-content">
