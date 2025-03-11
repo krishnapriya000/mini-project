@@ -32,6 +32,7 @@ $signup_table = "CREATE TABLE IF NOT EXISTS signup (
     status ENUM('active', 'inactive', 'pending') NOT NULL DEFAULT 'pending',
     reg_type VARCHAR(50)
 )";
+
 $conn->query($signup_table);
 
 // Alter Signup Table to add reset token columns
