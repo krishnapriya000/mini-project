@@ -36,6 +36,21 @@ if ($_SERVER["REQUEST_METHOD"] === 'POST') {
                     $_SESSION['error'] = "Error deleting brand: " . $stmt->error;
                 }
                 break;
+
+            case 'edit_brand':
+                $brand_id = $_POST['brand_id'];
+                $category_id = $_POST['category_id'];
+                $subcategory_id = $_POST['subcategory_id'];
+                $brand_name = $_POST['brand_name'];
+                
+                $stmt = $conn->prepare("UPDATE brand_table SET category_id = ?, subcategory_id = ?, brand_name = ? WHERE brand_id = ?");
+                $stmt->bind_param("iisi", $category_id, $subcategory_id, $brand_name, $brand_id);
+                if ($stmt->execute()) {
+                    $_SESSION['message'] = "Brand updated successfully";
+                } else {
+                    $_SESSION['error'] = "Error updating brand: " . $stmt->error;
+                }
+                break;
         }
     }
 }
@@ -220,14 +235,12 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 13px;
-            transition: all 0.3s ease;
+            margin-right: 5px;
         }
 
         .edit-btn {
             background-color: #2196F3;
             color: white;
-            margin-right: 5px;
         }
 
         .edit-btn:hover {
@@ -259,7 +272,7 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
             background-color: white;
             margin: 15% auto;
             padding: 20px;
-            border-radius: 8px;
+            border-radius: 5px;
             width: 50%;
             max-width: 500px;
             position: relative;
@@ -267,19 +280,12 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
 
         .close {
             position: absolute;
-            right: 20px;
-            top: 15px;
-            font-size: 28px;
-            font-weight: bold;
+            right: 10px;
+            top: 10px;
+            font-size: 24px;
             cursor: pointer;
-            color: #666;
         }
 
-        .close:hover {
-            color: #333;
-        }
-
-        /* Form Styles */
         .form-group {
             margin-bottom: 15px;
         }
@@ -287,27 +293,14 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
         .form-group label {
             display: block;
             margin-bottom: 5px;
-            color: #333;
-            font-weight: 500;
         }
 
         .form-group input,
-        .form-group select,
-        .form-group textarea {
+        .form-group select {
             width: 100%;
-            padding: 8px 12px;
+            padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #4CAF50;
-            box-shadow: 0 0 5px rgba(76, 175, 80, 0.2);
         }
 
         /* Message Styles */
@@ -455,7 +448,38 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
                 </tr>
             </thead>
             <tbody id="brandTableBody">
-                <!-- Will be populated via JavaScript -->
+                <?php
+                $query = "SELECT b.*, c.name as category_name, s.subcategory_name 
+                          FROM brand_table b
+                          JOIN categories_table c ON b.category_id = c.category_id
+                          JOIN subcategories s ON b.subcategory_id = s.id
+                          WHERE b.is_active = 1";
+                
+                if (!empty($selected_category)) {
+                    $query .= " AND b.category_id = " . $conn->real_escape_string($selected_category);
+                }
+                if (!empty($selected_subcategory)) {
+                    $query .= " AND b.subcategory_id = " . $conn->real_escape_string($selected_subcategory);
+                }
+                
+                $result = $conn->query($query);
+                
+                while($row = $result->fetch_assoc()): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($row['category_name']); ?></td>
+                        <td><?php echo htmlspecialchars($row['subcategory_name']); ?></td>
+                        <td><?php echo htmlspecialchars($row['brand_name']); ?></td>
+                        <td>
+                            <button class="action-btn edit-btn" onclick="editBrand(
+                                <?php echo $row['brand_id']; ?>,
+                                <?php echo $row['category_id']; ?>,
+                                <?php echo $row['subcategory_id']; ?>,
+                                '<?php echo addslashes($row['brand_name']); ?>'
+                            )">Edit</button>
+                            <button class="action-btn delete-btn" onclick="deleteBrand(<?php echo $row['brand_id']; ?>)">Delete</button>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
             </tbody>
         </table>
     </div>
@@ -491,6 +515,45 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
                     <input type="text" name="brand_name" required>
                 </div>
                 <button type="submit" class="add-btn">Add Brand</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Brand Modal -->
+    <div id="editBrandModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editBrandModal')">&times;</span>
+            <h2>Edit Brand</h2>
+            <form method="POST">
+                <input type="hidden" name="action" value="edit_brand">
+                <input type="hidden" name="brand_id" id="edit_brand_id">
+                
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="category_id" id="editModalCategorySelect" required onchange="loadEditModalSubcategories(this.value)">
+                        <?php 
+                        $categories_result->data_seek(0);
+                        while($category = $categories_result->fetch_assoc()): ?>
+                            <option value="<?php echo $category['category_id']; ?>">
+                                <?php echo htmlspecialchars($category['name']); ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Subcategory</label>
+                    <select name="subcategory_id" id="editModalSubcategorySelect" required>
+                        <option value="">Select Subcategory</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Brand Name</label>
+                    <input type="text" name="brand_name" id="edit_brand_name" required>
+                </div>
+                
+                <button type="submit" class="add-btn">Update Brand</button>
             </form>
         </div>
     </div>
@@ -577,9 +640,53 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
             }
         }
 
+        function editBrand(brandId, categoryId, subcategoryId, brandName) {
+            // Set values in the edit modal
+            document.getElementById('edit_brand_id').value = brandId;
+            document.getElementById('editModalCategorySelect').value = categoryId;
+            document.getElementById('edit_brand_name').value = brandName;
+            
+            // Load subcategories and set the selected value
+            loadEditModalSubcategories(categoryId, subcategoryId);
+            
+            // Show the modal
+            document.getElementById('editBrandModal').style.display = 'block';
+        }
+
+        function loadEditModalSubcategories(categoryId, selectedSubcategoryId = null) {
+            if (!categoryId) {
+                document.getElementById('editModalSubcategorySelect').innerHTML = '<option value="">Select Subcategory</option>';
+                return;
+            }
+
+            fetch(`get_subcategories.php?category_id=${categoryId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('editModalSubcategorySelect');
+                    select.innerHTML = '<option value="">Select Subcategory</option>';
+                    data.forEach(subcategory => {
+                        const option = document.createElement('option');
+                        option.value = subcategory.id;
+                        option.textContent = subcategory.subcategory_name;
+                        if (selectedSubcategoryId && subcategory.id == selectedSubcategoryId) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error loading subcategories:', error));
+        }
+
         // Load subcategories if category is selected
         if (document.getElementById('categoryFilter').value) {
             loadSubcategories(document.getElementById('categoryFilter').value);
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
         }
     </script>
 </body>

@@ -246,6 +246,93 @@ if (!$conn->query($brand_table)) {
     echo "Error creating brand table: " . $conn->error . "<br>";
 }
 
+
+
+$cart_table = "CREATE TABLE IF NOT EXISTS cart_table (
+    cart_id INT AUTO_INCREMENT PRIMARY KEY,
+    signupid INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    status ENUM('active', 'completed', 'abandoned') DEFAULT 'active',
+    FOREIGN KEY (signupid) REFERENCES signup(signupid) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+if (!$conn->query($cart_table)) {
+    echo "Error creating cart table: " . $conn->error . "<br>";
+}
+
+$cart_items_table = "CREATE TABLE IF NOT EXISTS cart_items (
+    cart_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    cart_id INT,
+    signupid INT NOT NULL,
+    product_id INT NOT NULL,
+    category_id INT NOT NULL,
+    subcategory_id INT NOT NULL,
+    quantity INT DEFAULT 1,
+    price DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (cart_id) REFERENCES cart_table(cart_id) ON DELETE CASCADE,
+    FOREIGN KEY (signupid) REFERENCES signup(signupid) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES product_table(product_id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories_table(category_id) ON DELETE CASCADE,
+    FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_cart_product (cart_id, product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+if (!$conn->query($cart_items_table)) {
+    echo "Error creating cart items table: " . $conn->error . "<br>";
+}
+
+$alter_cart_items = "ALTER TABLE cart_items 
+    ADD COLUMN IF NOT EXISTS status ENUM('active', 'disabled') DEFAULT 'active'";
+
+if (!$conn->query($alter_cart_items)) {
+    echo "Error altering cart_items table: " . $conn->error . "<br>";
+} else {
+    // echo "Cart items table altered successfully<br>";
+}
+
+// Update existing cart_items to have 'active' status if they don't have a status yet
+$update_cart_items = "UPDATE cart_items SET status = 'active' WHERE status IS NULL";
+if (!$conn->query($update_cart_items)) {
+    echo "Error updating cart_items status: " . $conn->error . "<br>";
+} else {
+    // echo "Existing cart items updated successfully<br>";
+}
+
+// Add an index on the status column for better query performance
+$add_status_index = "CREATE INDEX IF NOT EXISTS idx_cart_items_status ON cart_items(status)";
+if (!$conn->query($add_status_index)) {
+    echo "Error creating status index: " . $conn->error . "<br>";
+} else {
+    // echo "Status index created successfully<br>";
+}
+
+// ... existing database connection code ...
+
+// Create shipping_addresses table
+$shipping_addresses = "CREATE TABLE IF NOT EXISTS shipping_addresses (
+    address_id INT PRIMARY KEY AUTO_INCREMENT,
+    signupid INT,
+    address_line1 TEXT NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(100) NOT NULL,
+    postal_code VARCHAR(20) NOT NULL,
+    is_default TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (signupid) REFERENCES signup(signupid) ON DELETE CASCADE
+)";
+
+// Execute the query
+if ($conn->query($shipping_addresses) === TRUE) {
+    //echo "Shipping addresses table created successfully<br>";
+} else {
+    echo "Error creating shipping addresses table: " . $conn->error . "<br>";
+}
+
+
+
 // Close the connection
 //$conn->close();
 ?>

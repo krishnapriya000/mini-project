@@ -102,7 +102,7 @@ $selected_category = isset($_GET['category_id']) ? $_GET['category_id'] : '';
     /* Sidebar Styles */
     .sidebar {
         width: 250px;
-        background-color: #2b2d42;
+        background-color: rgb(179, 69, 10);
         color: white;
         height: 100vh;
         padding: 20px 0;
@@ -112,7 +112,7 @@ $selected_category = isset($_GET['category_id']) ? $_GET['category_id'] : '';
     .brand-name {
         font-size: 24px;
         padding: 20px;
-        border-bottom: 1px solid #3d3f54;
+        border-bottom: 1px solid rgb(179, 69, 10);
     }
 
     .nav-items {
@@ -132,11 +132,11 @@ $selected_category = isset($_GET['category_id']) ? $_GET['category_id'] : '';
     }
 
     .nav-item:hover {
-        background-color: #3d3f54;
+        background-color: rgb(215, 170, 146);
     }
 
     .nav-item.active {
-        background-color: #3d3f54;
+        background-color: rgb(213, 180, 161);
     }
 
     /* Main Content Styles */
@@ -194,7 +194,7 @@ $selected_category = isset($_GET['category_id']) ? $_GET['category_id'] : '';
     }
 
     .data-table th {
-        background-color: #2b2d42;
+        background-color: rgb(179, 69, 10);
         color: white;
     }
 
