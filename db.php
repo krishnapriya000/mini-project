@@ -147,19 +147,58 @@ try {
 
 
 
-// Create order table
+// Drop existing order_table if you want to recreate it
+$drop_order_table = "DROP TABLE IF EXISTS order_table";
+$conn->query($drop_order_table);
+
+// Create modified order_table
 $order_table = "CREATE TABLE IF NOT EXISTS order_table (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    total_amount DECIMAL(10,5) NOT NULL,
-    status_name ENUM('pending', 'shipped', 'delivered', 'cancelled') NOT NULL DEFAULT 'pending',
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
     shipping_address VARCHAR(255) NOT NULL,
-    order_date DATE NOT NULL,
-    payment_method VARCHAR(50) NOT NULL,
-    tracking_number VARCHAR(50) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(100) NOT NULL,
+    pincode VARCHAR(10) NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    status_name ENUM('pending', 'shipped', 'delivered', 'cancelled') NOT NULL DEFAULT 'pending',
+    payment_method ENUM('cod', 'online') DEFAULT 'cod',
+    payment_status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
+    tracking_number VARCHAR(50) DEFAULT NULL,
+    razorpay_order_id VARCHAR(100) NULL,
+    razorpay_payment_id VARCHAR(100) NULL,
+    razorpay_signature VARCHAR(255) NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES user_table(user_id) ON DELETE CASCADE
 )";
-$conn->query($order_table);
+
+if ($conn->query($order_table) === TRUE) {
+    //echo "Order table modified successfully<br>";
+} else {
+    echo "Error modifying order table: " . $conn->error . "<br>";
+}
+
+// Create order_items table if it doesn't exist
+$order_items_table = "CREATE TABLE IF NOT EXISTS order_items (
+    order_item_id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES order_table(order_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES product_table(product_id) ON DELETE RESTRICT
+)";
+
+if ($conn->query($order_items_table) === TRUE) {
+    //echo "Order items table created successfully<br>";
+} else {
+    echo "Error creating order items table: " . $conn->error . "<br>";
+}
 
 $review_table = "CREATE TABLE IF NOT EXISTS review_table (
     review_id INT AUTO_INCREMENT PRIMARY KEY,
