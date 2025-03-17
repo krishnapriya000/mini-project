@@ -93,63 +93,28 @@ if (!$conn->query($categories_table)) {
 }
 
 
-// Create product table
-$product_table = "CREATE TABLE IF NOT EXISTS product_table (
-    product_id INT AUTO_INCREMENT PRIMARY KEY,
-    seller_id INT NOT NULL,
-    category_id INT NOT NULL,
-    subcategory_id INT NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    stock_quantity INT NOT NULL DEFAULT 0,
-    size VARCHAR(50) NOT NULL,
-    colour VARCHAR(50) NOT NULL,
-    brand VARCHAR(100),
-    condition_type ENUM('New', 'Used', 'Refurbished') DEFAULT 'New',
-    image_url VARCHAR(255) NOT NULL,
-    status TINYINT(1) DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (seller_id) REFERENCES seller(seller_id) ON DELETE CASCADE,
-    FOREIGN KEY (category_id) REFERENCES categories_table(category_id) ON DELETE CASCADE,
-    FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE CASCADE,
-    INDEX idx_product_status (status),
-    INDEX idx_product_category (category_id),
-    INDEX idx_product_subcategory (subcategory_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
-// Try to create the table and handle any errors
-try {
-    if ($conn->query($product_table) === TRUE) {
-       // echo "Product table created successfully<br>";
-    } else {
-        throw new Exception($conn->error);
-    }
-} catch (Exception $e) {
-    echo "Error creating product_table: " . $e->getMessage() . "<br>";
-    // Log the error for debugging
-    error_log("Product table creation error: " . $e->getMessage());
-}
 
-// Verify the table exists and has the correct structure
-try {
-    $result = $conn->query("DESCRIBE product_table");
-    if ($result) {
-       // echo "Product table structure verified successfully<br>";
-    } else {
-        throw new Exception($conn->error);
-    }
-} catch (Exception $e) {
-    echo "Error verifying product_table: " . $e->getMessage() . "<br>";
-    error_log("Product table verification error: " . $e->getMessage());
+
+// Add this code after establishing your database connection
+$alter_query = "ALTER TABLE product_table 
+               ADD COLUMN IF NOT EXISTS image_url_2 VARCHAR(255) AFTER image_url,
+               ADD COLUMN IF NOT EXISTS image_url_3 VARCHAR(255) AFTER image_url_2";
+
+// Execute the ALTER TABLE query
+if ($conn->query($alter_query) === TRUE) {
+    // Columns added successfully or already exist
+    error_log("Image columns added successfully or already exist");
+} else {
+    // Error adding columns
+    error_log("Error adding image columns: " . $conn->error);
 }
 
 
 
-// Drop existing order_table if you want to recreate it
-$drop_order_table = "DROP TABLE IF EXISTS order_table";
-$conn->query($drop_order_table);
+// // Drop existing order_table if you want to recreate it
+// $drop_order_table = "DROP TABLE IF EXISTS order_table";
+// $conn->query($drop_order_table);
 
 // Create modified order_table
 $order_table = "CREATE TABLE IF NOT EXISTS order_table (

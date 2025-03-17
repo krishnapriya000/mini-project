@@ -317,17 +317,18 @@ $stmt->close();
         }
 
         .product-title {
-            font-weight: 600;
-            font-size: 16px;
-            color: #2c3e50;
-            margin-bottom: 15px;
-            line-height: 1.4;
-            height: 45px;
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-        }
+    font-weight: 600;
+    font-size: 16px;
+    color: #2c3e50;
+    margin-bottom: 15px;
+    line-height: 1.4;
+    height: 45px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    text-align: center; /* Add this line */
+}
 
         .product-price {
             color: #e74c3c;
@@ -350,17 +351,20 @@ $stmt->close();
         }
 
         .add-to-cart {
-            background: linear-gradient(45deg, #0077cc, #1a8cff);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-        }
+    background: linear-gradient(45deg, #0077cc, #1a8cff);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    display: block;           /* Add this line */
+    margin: 0 auto;           /* Add this line */
+    text-align: center;       /* Add this line */
+}
 
         .add-to-cart:hover {
             background: linear-gradient(45deg, #005fa3, #0066cc);
@@ -520,12 +524,14 @@ $stmt->close();
                 
                 <div class="product-card">
                     <div class="product-image">
-                        <?php if (!empty($row['image_url'])): ?>
-                            <img src="<?php echo htmlspecialchars($row['image_url']); ?>" 
-                                 alt="<?php echo htmlspecialchars($row['name']); ?>">
-                        <?php else: ?>
-                            <img src="images/placeholder.jpg" alt="No Image Available">
-                        <?php endif; ?>
+                        <a href="product_details.php?id=<?php echo $row['product_id']; ?>">
+                            <?php if (!empty($row['image_url'])): ?>
+                                <img src="<?php echo htmlspecialchars($row['image_url']); ?>" 
+                                     alt="<?php echo htmlspecialchars($row['name']); ?>">
+                            <?php else: ?>
+                                <img src="images/placeholder.jpg" alt="No Image Available">
+                            <?php endif; ?>
+                        </a>
                     </div>
                     <div class="product-info">
                         <div class="product-title"><?php echo htmlspecialchars($row['name']); ?></div>
@@ -533,7 +539,7 @@ $stmt->close();
                             ₹<?php echo number_format($row['price'], 2); ?>
                             <span class="discount">(<?php echo $discount_percentage; ?>% off)</span>
                         </div>
-                        <form action="add_to_cart.php" method="POST">
+                        <form action="cart.php" method="POST">
                             <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
                             <input type="hidden" name="quantity" value="1">
                             <button type="submit" class="add-to-cart">Add to Cart</button>

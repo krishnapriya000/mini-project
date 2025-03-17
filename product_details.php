@@ -607,15 +607,15 @@ $related_result = $stmt->get_result();
                     <!-- You can add more thumbnails if you have multiple product images -->
                     <!-- For now, we'll add placeholder images as examples -->
                     <!-- In a real implementation, you would fetch these from a product_images table -->
-                    <div class="thumbnail" onclick="changeImage(this, 'images/placeholder1.jpg')">
-                        <img src="images/placeholder1.jpg" alt="Additional View">
+                    <div class="thumbnail active" onclick="changeImage(this, '<?php echo !empty($product['image_url_2']) ? htmlspecialchars($product['image_url_2']) : 'images/placeholder.jpg'; ?>')">
+                        <img src="<?php echo !empty($product['image_url_2']) ? htmlspecialchars($product['image_url_2']) : 'images/placeholder.jpg'; ?>" 
+                             alt="<?php echo htmlspecialchars($product['name']); ?>">
                     </div>
-                    <div class="thumbnail" onclick="changeImage(this, 'images/placeholder2.jpg')">
-                        <img src="images/placeholder2.jpg" alt="Additional View">
+                    <div class="thumbnail active" onclick="changeImage(this, '<?php echo !empty($product['image_url_3']) ? htmlspecialchars($product['image_url_3']) : 'images/placeholder.jpg'; ?>')">
+                        <img src="<?php echo !empty($product['image_url_3']) ? htmlspecialchars($product['image_url_3']) : 'images/placeholder.jpg'; ?>" 
+                             alt="<?php echo htmlspecialchars($product['name']); ?>">
                     </div>
-                    <div class="thumbnail" onclick="changeImage(this, 'images/placeholder3.jpg')">
-                        <img src="images/placeholder3.jpg" alt="Additional View">
-                    </div>
+                    
                 </div>
             </div>
             <div class="product-info-container">

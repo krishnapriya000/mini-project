@@ -15,6 +15,12 @@ $seller_id = $_SESSION['seller_id'];
 
 // Process form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Validate category_id
+    if (empty($_POST['category_id'])) {
+        echo "<script>alert('Category is required.');</script>";
+        exit();
+    }
+
     // Get form data
     $product_name = $_POST['product_name'];
     $price = $_POST['price'];
@@ -28,7 +34,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $condition_type = $_POST['condition_type'];
     $description = $_POST['description'];
 
-    // Handle file upload
+    // Handle file uploads
+    $image_urls = array(null, null, null); // Initialize with nulls for up to 3 images
     $target_dir = "uploads/products/";
 
     // Create directory if it doesn't exist
@@ -39,112 +46,55 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             echo "<script>alert('$dir_error');</script>";
         }
     }
-    // Check if image was uploaded
-    if(isset($_FILES["product_image"]) && $_FILES["product_image"]["error"] == 0) {
-        $target_file = $target_dir . basename($_FILES["product_image"]["name"]);
-        $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
 
-        // Generate unique filename to prevent overwriting
-        $uniqueFileName = uniqid() . '.' . $imageFileType;
-        $target_file = $target_dir . $uniqueFileName;
-
-        // Check if image file is a actual image
-        $check = getimagesize($_FILES["product_image"]["tmp_name"]);
-        if ($check !== false) {
-            // Upload file
-            if (move_uploaded_file($_FILES["product_image"]["tmp_name"], $target_file)) {
-                // File uploaded successfully, now insert product data into database
-                $image_url = $target_file;
+    // Check if images were uploaded
+    if(isset($_FILES["product_image"]) && is_array($_FILES["product_image"]["name"])) {
+        $file_count = count($_FILES["product_image"]["name"]);
+        $max_images = min($file_count, 3); // Limit to 3 images
+        
+        for($i = 0; $i < $max_images; $i++) {
+            if($_FILES["product_image"]["error"][$i] == 0) {
+                $file_name = $_FILES["product_image"]["name"][$i];
+                $imageFileType = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
                 
-                // Reconnect to the database if the connection was closed
-                $conn = new mysqli($servername, $username, $password, $database);
+                // Generate unique filename
+                $uniqueFileName = uniqid() . '_' . $i . '.' . $imageFileType;
+                $target_file = $target_dir . $uniqueFileName;
                 
-                // Check connection
-                if ($conn->connect_error) {
-                    die("Connection failed: " . $conn->connect_error);
-                }
-                
-                if ($nested_subcategory_id === NULL) {
-                    $sql = "INSERT INTO product_table (seller_id, category_id, subcategory_id, 
-                            name, description, price, stock_quantity, size, colour, brand, condition_type, image_url) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                    
-                    $stmt = $conn->prepare($sql);
-                    if ($stmt) {
-                        $stmt->bind_param("iiissdiissss", 
-                            $seller_id, 
-                            $category_id, 
-                            $subcategory_id, 
-                            $product_name, 
-                            $description, 
-                            $price, 
-                            $stock_quantity, 
-                            $size, 
-                            $colour, 
-                            $brand, 
-                            $condition_type, 
-                            $image_url
-                        );
-
-                        if ($stmt->execute()) {
-                            // Redirect to products.php after successful insertion
-                            header("Location: products.php");
-                            exit();
-                        } else {
-                            $error_message = "Error executing statement: " . $stmt->error;
-                            error_log($error_message);
-                            echo "<script>alert('$error_message');</script>";
-                        }
-                        $stmt->close();
+                // Check if image file is actual image
+                $check = getimagesize($_FILES["product_image"]["tmp_name"][$i]);
+                if($check !== false) {
+                    // Upload file
+                    if(move_uploaded_file($_FILES["product_image"]["tmp_name"][$i], $target_file)) {
+                        $image_urls[$i] = $target_file;
                     } else {
-                        $error_message = "Error preparing statement: " . $conn->error;
-                        error_log($error_message);
-                        echo "<script>alert('$error_message');</script>";
+                        $upload_error = "Sorry, there was an error uploading image #" . ($i+1);
+                        error_log($upload_error);
+                        echo "<script>alert('$upload_error');</script>";
                     }
                 } else {
-                    $sql = "INSERT INTO product_table (seller_id, category_id, subcategory_id, nested_subcategory_id, 
-                            name, description, price, stock_quantity, size, colour, brand, condition_type, image_url) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                    
-                    $stmt = $conn->prepare($sql);
-                    if ($stmt) {
-                        $stmt->bind_param("iiiissdiissss", 
-                            $seller_id, 
-                            $category_id, 
-                            $subcategory_id, 
-                            $nested_subcategory_id,
-                            $product_name, 
-                            $description, 
-                            $price, 
-                            $stock_quantity, 
-                            $size, 
-                            $colour, 
-                            $brand, 
-                            $condition_type, 
-                            $image_url
-                        );
-
-                        if ($stmt->execute()) {
-                            // Redirect to products.php after successful insertion
-                            header("Location: products.php");
-                            exit();
-                        } else {
-                            $error_message = "Error executing statement: " . $stmt->error;
-                            error_log($error_message);
-                            echo "<script>alert('$error_message');</script>";
-                        }
-                        $stmt->close();
-                    } else {
-                        $error_message = "Error preparing statement: " . $conn->error;
-                        error_log($error_message);
-                        echo "<script>alert('$error_message');</script>";
-                    }
+                    echo "<script>alert('File #" . ($i+1) . " is not an image.');</script>";
                 }
-                
-                // Close the connection
-                $conn->close();
+            }
+        }
+    } 
+    // Handle single image upload (in case the form isn't updated)
+    else if(isset($_FILES["product_image"]) && $_FILES["product_image"]["error"] == 0) {
+        $target_file = $target_dir . basename($_FILES["product_image"]["name"]);
+        $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
+        
+        // Generate unique filename
+        $uniqueFileName = uniqid() . '.' . $imageFileType;
+        $target_file = $target_dir . $uniqueFileName;
+        
+        // Check if image file is actual image
+        $check = getimagesize($_FILES["product_image"]["tmp_name"]);
+        if($check !== false) {
+            // Upload file
+            if(move_uploaded_file($_FILES["product_image"]["tmp_name"], $target_file)) {
+                $image_urls[0] = $target_file;
             } else {
-                $upload_error = "Sorry, there was an error uploading your file: " . error_get_last()['message'];
+                $upload_error = "Sorry, there was an error uploading your file";
                 error_log($upload_error);
                 echo "<script>alert('$upload_error');</script>";
             }
@@ -152,9 +102,92 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             echo "<script>alert('File is not an image.');</script>";
         }
     } else {
-        $file_error = "No file uploaded or file upload error: " . $_FILES["product_image"]["error"];
+        $file_error = "No file uploaded or file upload error";
         error_log($file_error);
         echo "<script>alert('$file_error');</script>";
+    }
+
+    if ($nested_subcategory_id === NULL) {
+        $sql = "INSERT INTO product_table (seller_id, category_id, subcategory_id, 
+                name, description, price, stock_quantity, size, colour, brand, condition_type, 
+                image_url, image_url_2, image_url_3) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $stmt->bind_param("iiissdiissssss", // 14 characters for 14 variables
+                $seller_id, 
+                $category_id, 
+                $subcategory_id, 
+                $product_name, 
+                $description, 
+                $price, 
+                $stock_quantity, 
+                $size, 
+                $colour, 
+                $brand, 
+                $condition_type, 
+                $image_urls[0],
+                $image_urls[1],
+                $image_urls[2]
+            );
+    
+            if ($stmt->execute()) {
+                // Redirect to products.php after successful insertion
+                header("Location: products.php");
+                exit();
+            } else {
+                $error_message = "Error executing statement: " . $stmt->error;
+                error_log($error_message);
+                echo "<script>alert('$error_message');</script>";
+            }
+            $stmt->close();
+        } else {
+            $error_message = "Error preparing statement: " . $conn->error;
+            error_log($error_message);
+            echo "<script>alert('$error_message');</script>";
+        }
+    } else {
+        $sql = "INSERT INTO product_table (seller_id, category_id, subcategory_id, nested_subcategory_id, 
+                name, description, price, stock_quantity, size, colour, brand, condition_type, 
+                image_url, image_url_2, image_url_3) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $stmt->bind_param("iiiissdiissssss", // 15 characters for 15 variables
+                $seller_id, 
+                $category_id, 
+                $subcategory_id, 
+                $nested_subcategory_id,
+                $product_name, 
+                $description, 
+                $price, 
+                $stock_quantity, 
+                $size, 
+                $colour, 
+                $brand, 
+                $condition_type, 
+                $image_urls[0],
+                $image_urls[1],
+                $image_urls[2]
+            );
+    
+            if ($stmt->execute()) {
+                // Redirect to products.php after successful insertion
+                header("Location: products.php");
+                exit();
+            } else {
+                $error_message = "Error executing statement: " . $stmt->error;
+                error_log($error_message);
+                echo "<script>alert('$error_message');</script>";
+            }
+            $stmt->close();
+        } else {
+            $error_message = "Error preparing statement: " . $conn->error;
+            error_log($error_message);
+            echo "<script>alert('$error_message');</script>";
+        }
     }
 }
 
@@ -164,7 +197,6 @@ $category_query = "SELECT * FROM categories_table ORDER BY name";
 $category_result = $conn->query($category_query);
 $conn->close();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -372,24 +404,29 @@ $conn->close();
             background-color: #f5f5f5;
         }
         
-        .image-preview {
-            width: 100%;
-            height: 150px;
-            border: 1px dashed #ddd;
-            border-radius: 4px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #f9f9f9;
-            margin-top: 10px;
-            overflow: hidden;
-        }
-        
-        .image-preview img {
-            max-width: 100%;
-            max-height: 100%;
-            display: none;
-        }
+        .image-previews {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.image-preview {
+    flex: 1;
+    height: 150px;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f9f9f9;
+    overflow: hidden;
+}
+
+.image-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    display: none;
+}
         
         .image-preview span {
             color: #999;
@@ -500,13 +537,23 @@ $conn->close();
                 </div>
                 
                 <div class="form-group">
-                    <label for="product_image">Product Image</label>
-                    <input type="file" id="product_image" name="product_image" accept="image/*" required>
-                    <div class="image-preview">
-                        <img id="image_preview_display" src="#" alt="Product Preview">
-                        <span id="image_preview_text">Image preview will appear here</span>
-                    </div>
-                </div>
+    <label for="product_image">Product Images (Upload up to 3)</label>
+    <input type="file" id="product_image" name="product_image[]" accept="image/*" multiple required>
+    <div class="image-previews">
+        <div class="image-preview">
+            <img id="image_preview_display_1" src="#" alt="Product Preview 1">
+            <span id="image_preview_text_1">Image 1 preview</span>
+        </div>
+        <div class="image-preview">
+            <img id="image_preview_display_2" src="#" alt="Product Preview 2">
+            <span id="image_preview_text_2">Image 2 preview</span>
+        </div>
+        <div class="image-preview">
+            <img id="image_preview_display_3" src="#" alt="Product Preview 3">
+            <span id="image_preview_text_3">Image 3 preview</span>
+        </div>
+    </div>
+</div>
                 
                 <div class="form-actions">
                     <button type="reset" class="btn btn-outline">Cancel</button>
@@ -517,26 +564,38 @@ $conn->close();
     </div>
     
     <script>
-        // Preview image before upload
-        document.getElementById('product_image').addEventListener('change', function(e) {
-            const preview = document.getElementById('image_preview_display');
-            const previewText = document.getElementById('image_preview_text');
+        // Preview images before upload
+document.getElementById('product_image').addEventListener('change', function(e) {
+    const previews = [
+        { img: document.getElementById('image_preview_display_1'), text: document.getElementById('image_preview_text_1') },
+        { img: document.getElementById('image_preview_display_2'), text: document.getElementById('image_preview_text_2') },
+        { img: document.getElementById('image_preview_display_3'), text: document.getElementById('image_preview_text_3') }
+    ];
+    
+    // Reset all previews
+    previews.forEach(preview => {
+        preview.img.style.display = 'none';
+        preview.text.style.display = 'block';
+    });
+    
+    // Display new previews
+    if (e.target.files) {
+        const maxImages = Math.min(e.target.files.length, 3);
+        
+        for (let i = 0; i < maxImages; i++) {
+            const reader = new FileReader();
+            const currentPreview = previews[i];
             
-            if (e.target.files && e.target.files[0]) {
-                const reader = new FileReader();
-                
-                reader.onload = function(event) {
-                    preview.src = event.target.result;
-                    preview.style.display = 'block';
-                    previewText.style.display = 'none';
-                }
-                
-                reader.readAsDataURL(e.target.files[0]);
-            } else {
-                preview.style.display = 'none';
-                previewText.style.display = 'block';
+            reader.onload = function(event) {
+                currentPreview.img.src = event.target.result;
+                currentPreview.img.style.display = 'block';
+                currentPreview.text.style.display = 'none';
             }
-        });
+            
+            reader.readAsDataURL(e.target.files[i]);
+        }
+    }
+});
         
         // Dynamic dropdowns for categories, subcategories, etc.
         document.getElementById('category').addEventListener('change', function() {

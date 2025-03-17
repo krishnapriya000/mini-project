@@ -16,7 +16,7 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user_result = $stmt->get_result();
 $user_data = $user_result->fetch_assoc();
-$signupid = $user_data['signupid'];
+//$signupid = $user_data['signupid'];
 
 // Fetch cart items
 $cart_items_query = "SELECT ci.*, p.name, p.price
