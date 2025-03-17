@@ -10,13 +10,45 @@ if (!isset($_SESSION['user_id'])) {
 
 // Get user details
 $user_id = $_SESSION['user_id'];
+$signupid = null;
+
+// Try to get signupid from user_table
 $get_user_query = "SELECT * FROM user_table WHERE user_id = ?";
 $stmt = $conn->prepare($get_user_query);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user_result = $stmt->get_result();
-$user_data = $user_result->fetch_assoc();
-//$signupid = $user_data['signupid'];
+
+if ($user_result && $user_result->num_rows > 0) {
+    $user_data = $user_result->fetch_assoc();
+    $signupid = $user_data['signupid'] ?? null;
+} else {
+    // If no rows returned, initialize empty user_data to avoid null errors
+    $user_data = array(
+        'name' => '',
+        'email' => '',
+        'phone' => '',
+        'address' => ''
+    );
+}
+
+// If signupid is still not found, try alternate methods
+if (!$signupid) {
+    // Check if it's directly in the session
+    $signupid = isset($_SESSION['signupid']) ? $_SESSION['signupid'] : null;
+    
+    // If still not found, try using user_id as signupid
+    if (!$signupid) {
+        $signupid = $user_id;
+    }
+}
+
+// Make sure we have a signupid before proceeding
+if (!$signupid) {
+    // Display error and link to login
+    echo "Session error: User identification not found. Please <a href='login.php'>login again</a>.";
+    exit();
+}
 
 // Fetch cart items
 $cart_items_query = "SELECT ci.*, p.name, p.price
@@ -35,20 +67,22 @@ $cart_items = $stmt->get_result();
 $subtotal = 0;
 $total_items = 0;
 
-while($item = $cart_items->fetch_assoc()) {
-    $total_items += $item['quantity'];
-    $item_total = $item['quantity'] * $item['price'];
-    $subtotal += $item_total;
+if ($cart_items && $cart_items->num_rows > 0) {
+    while($item = $cart_items->fetch_assoc()) {
+        $total_items += $item['quantity'];
+        $item_total = $item['quantity'] * $item['price'];
+        $subtotal += $item_total;
+    }
+    
+    // Reset the cart items result for display later
+    $stmt->execute();
+    $cart_items = $stmt->get_result();
 }
 
-// Calculate shipping, tax, and total
+// Calculate shipping, tax, and total - using the same calculation as cart.php
 $shipping = $subtotal >= 1000 ? 0 : 100;
 $tax = $subtotal * 0.05;
 $total = $subtotal + $shipping + $tax;
-
-// Reset the cart items result
-$stmt->execute();
-$cart_items = $stmt->get_result();
 
 // Razorpay API key
 $razorpay_key_id = "rzp_test_Z4RWNiIGZc3YxK";
@@ -56,6 +90,7 @@ $razorpay_key_id = "rzp_test_Z4RWNiIGZc3YxK";
 // Create a unique order ID
 $order_id = 'ORD' . time() . $user_id;
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
