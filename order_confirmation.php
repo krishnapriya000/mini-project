@@ -1,52 +1,31 @@
-
 <?php
 session_start();
 require_once($_SERVER['DOCUMENT_ROOT'] . '/baby/connect.php');
 
-// Check if the user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+if (!isset($_SESSION['signupid'])) {
+    header("Location: error.php");
     exit();
 }
 
-// Check if the order_id is provided in the URL
-if (!isset($_GET['order_id'])) {
-    header("Location: cart.php");
-    exit();
-}
+$signupid = $_SESSION['signupid'];
 
-$order_id = $_GET['order_id'];
-$user_id = $_SESSION['user_id'];
-
-// Fetch the order details from the database
-$order_query = "SELECT * FROM orders_table WHERE order_id = ? AND signupid = ?";
-$stmt = $conn->prepare($order_query);
-$stmt->bind_param("si", $order_id, $user_id);
-$stmt->execute();
-$order_result = $stmt->get_result();
-
-// Check if the order exists
-if ($order_result->num_rows === 0) {
-    header("Location: cart.php?error=order_not_found");
-    exit();
-}
-
-$order = $order_result->fetch_assoc();
-
-// Fetch the payment details
-$payment_query = "SELECT * FROM payment_table WHERE order_id = ? AND signupid = ?";
+// Fetch latest payment details
+$payment_query = "SELECT * FROM payment_table 
+                 WHERE signupid = ? AND payment_status = 'paid'
+                 ORDER BY created_at DESC LIMIT 1";
 $stmt = $conn->prepare($payment_query);
-$stmt->bind_param("si", $order_id, $user_id);
+$stmt->bind_param("i", $signupid);
 $stmt->execute();
 $payment_result = $stmt->get_result();
 $payment = $payment_result->fetch_assoc();
 
-// Fetch the order items from the database
-$items_query = "SELECT * FROM order_items WHERE order_id = ?";
-$stmt = $conn->prepare($items_query);
-$stmt->bind_param("s", $order_id);
+// Get user details
+$user_query = "SELECT * FROM signup WHERE signupid = ?";
+$stmt = $conn->prepare($user_query);
+$stmt->bind_param("i", $signupid);
 $stmt->execute();
-$items_result = $stmt->get_result();
+$user_result = $stmt->get_result();
+$user = $user_result->fetch_assoc();
 ?>
 
 <!DOCTYPE html>
@@ -56,153 +35,272 @@ $items_result = $stmt->get_result();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Confirmation - BabyCubs</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
- 
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: Arial, sans-serif;
         }
 
         body {
-            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
             padding: 20px;
+            color: #333;
         }
 
-        .confirmation-container {
-            max-width: 800px;
+        .container {
+            max-width: 1000px;
             margin: 0 auto;
-            background-color: white;
+            background: white;
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            padding: 30px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 40px;
         }
 
-        h1 {
-            font-size: 28px;
-            color: #2c3e50;
-            margin-bottom: 20px;
+        .header {
             text-align: center;
+            margin-bottom: 40px;
         }
 
-        .order-details, .order-items {
-            margin-bottom: 30px;
-        }
-
-        .order-details h2, .order-items h2 {
-            font-size: 22px;
+        .header h1 {
             color: #2c3e50;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 10px;
-        }
-
-        .order-details p {
-            font-size: 16px;
-            color: #555;
+            font-size: 32px;
             margin-bottom: 10px;
         }
 
-        .order-items table {
+        .success-icon {
+            color: #28a745;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .order-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .order-section h2 {
+            color: #2c3e50;
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .info-item {
+            margin-bottom: 15px;
+        }
+
+        .info-label {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .status-paid {
+            background-color: #28a745;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            display: inline-block;
+        }
+
+        table {
             width: 100%;
             border-collapse: collapse;
+            margin: 20px 0;
         }
 
-        .order-items th, .order-items td {
-            padding: 12px;
+        th, td {
+            padding: 15px;
             text-align: left;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #eee;
         }
 
-        .order-items th {
+        th {
             background-color: #f8f9fa;
             font-weight: 600;
             color: #2c3e50;
         }
 
-        .order-items td {
-            color: #555;
+        .product-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
-        .order-items td.item-name {
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .order-total {
-            font-size: 18px;
-            font-weight: 600;
-            color: #e74c3c;
-            text-align: right;
-            margin-top: 20px;
-        }
-
-        .btn-home {
-            display: inline-block;
-            background-color: #0077cc;
-            color: white;
-            padding: 12px 24px;
+        .product-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
             border-radius: 5px;
-            text-decoration: none;
-            font-weight: 600;
-            text-align: center;
-            margin-top: 20px;
-            transition: background-color 0.3s ease;
         }
 
-        .btn-home:hover {
-            background-color: #005fa3;
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+            border: none;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="confirmation-container">
-        <h1>Order Confirmation</h1>
-
-        <!-- Order Details -->
-        <div class="order-details">
-            <h2>Order Details</h2>
-            <p><strong>Order ID:</strong> <?php echo htmlspecialchars($order['order_id']); ?></p>
-            <p><strong>Order Date:</strong> <?php echo date("F j, Y, g:i a", strtotime($order['created_at'])); ?></p>
-            <p><strong>Total Amount:</strong> ₹<?php echo number_format($order['total_amount'], 2); ?></p>
-            <p><strong>Shipping Address:</strong> <?php echo htmlspecialchars($order['shipping_address']); ?></p>
-            <p><strong>Payment Status:</strong> <?php echo htmlspecialchars($order['payment_status']); ?></p>
-            <p><strong>Order Status:</strong> <?php echo htmlspecialchars($order['order_status']); ?></p>
-            <p><strong>Payment ID:</strong> <?php echo htmlspecialchars($payment['payment_id']); ?></p>
-            <p><strong>Payment Method:</strong> <?php echo htmlspecialchars($payment['payment_method']); ?></p>
+    <div class="container">
+        <div class="header">
+            <i class="fas fa-check-circle success-icon"></i>
+            <h1>Order Confirmed!</h1>
+            <p>Thank you for shopping with BabyCubs</p>
         </div>
 
-        <!-- Order Items -->
-        <div class="order-items">
-            <h2>Order Items</h2>
+        <div class="order-section">
+            <h2>Order Details</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Order Date</div>
+                    <div class="info-value">
+                        <?php echo date('d M Y, h:i A', strtotime($payment['created_at'])); ?>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Payment ID</div>
+                    <div class="info-value"><?php echo htmlspecialchars($payment['payment_id']); ?></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Payment Method</div>
+                    <div class="info-value"><?php echo htmlspecialchars($payment['payment_method']); ?></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Status</div>
+                    <div class="info-value">
+                        <span class="status-paid">Paid</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="order-section">
+            <h2>Order Summary</h2>
             <table>
                 <thead>
                     <tr>
                         <th>Product</th>
-                        <th>Quantity</th>
                         <th>Price</th>
-                        <th>Subtotal</th>
+                        <th>Quantity</th>
+                        <th>Total</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while ($item = $items_result->fetch_assoc()): ?>
-                        <tr>
-                            <td class="item-name"><?php echo htmlspecialchars($item['product_name']); ?></td>
-                            <td><?php echo $item['quantity']; ?></td>
-                            <td>₹<?php echo number_format($item['price'], 2); ?></td>
-                            <td>₹<?php echo number_format($item['subtotal'], 2); ?></td>
-                        </tr>
+                    <?php
+                    // Fetch ordered items
+                    $items_query = "SELECT * FROM cart_table WHERE signupid = ? AND status = 'ordered'";
+                    $stmt = $conn->prepare($items_query);
+                    $stmt->bind_param("i", $signupid);
+                    $stmt->execute();
+                    $items_result = $stmt->get_result();
+                    $total = 0;
+
+                    while ($item = $items_result->fetch_assoc()):
+                        $itemTotal = $item['price'] * $item['quantity'];
+                        $total += $itemTotal;
+                    ?>
+                    <tr>
+                        <td>
+                            <div class="product-info">
+                                <span><?php echo htmlspecialchars($item['product_name']); ?></span>
+                            </div>
+                        </td>
+                        <td>₹<?php echo number_format($item['price'], 2); ?></td>
+                        <td><?php echo htmlspecialchars($item['quantity']); ?></td>
+                        <td>₹<?php echo number_format($itemTotal, 2); ?></td>
+                    </tr>
                     <?php endwhile; ?>
+                    <tr class="total-row">
+                        <td colspan="3" style="text-align: right;"><strong>Total Amount:</strong></td>
+                        <td><strong>₹<?php echo number_format($total, 2); ?></strong></td>
+                    </tr>
                 </tbody>
             </table>
-            <div class="order-total">
-                <strong>Total:</strong> ₹<?php echo number_format($order['total_amount'], 2); ?>
-            </div>
         </div>
 
-        <!-- Back to Home Button -->
-        <a href="index.php" class="btn-home">Back to Home</a>
+        <?php if (!empty($user['address'])): ?>
+        <div class="order-section">
+            <h2>Shipping Address</h2>
+            <p><?php echo nl2br(htmlspecialchars($user['address'])); ?></p>
+        </div>
+        <?php endif; ?>
+
+        <div class="action-buttons">
+            <a href="print_receipt.php" class="btn btn-primary" target="_blank">
+                <i class="fas fa-print"></i> Print Receipt
+            </a>
+            <a href="index.php" class="btn btn-secondary">
+                <i class="fas fa-home"></i> Continue Shopping
+            </a>
+        </div>
     </div>
 </body>
+</html>
 </html>

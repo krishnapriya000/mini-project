@@ -2,37 +2,30 @@
 session_start();
 require_once($_SERVER['DOCUMENT_ROOT'] . '/baby/connect.php');
 
-if (!isset($_SESSION['signupid']) || !isset($_GET['order_id'])) {
+if (!isset($_SESSION['signupid'])) {
     header("Location: error.php");
     exit();
 }
 
-$order_id = $_GET['order_id'];
 $signupid = $_SESSION['signupid'];
 
-// Fetch order details
-$query = "SELECT * FROM orders_table WHERE order_id = ? AND signupid = ?";
-$stmt = $conn->prepare($query);
-$stmt->bind_param("si", $order_id, $signupid);
-$stmt->execute();
-$result = $stmt->get_result();
-$order = $result->fetch_assoc();
-
-// Fetch payment details
-$payment_query = "SELECT * FROM payment_table WHERE order_id = ?";
+// Fetch latest payment details
+$payment_query = "SELECT * FROM payment_table 
+                 WHERE signupid = ? AND payment_status = 'paid'
+                 ORDER BY created_at DESC LIMIT 1";
 $stmt = $conn->prepare($payment_query);
-$stmt->bind_param("s", $order_id);
+$stmt->bind_param("i", $signupid);
 $stmt->execute();
 $payment_result = $stmt->get_result();
 $payment = $payment_result->fetch_assoc();
 
-// Fetch cart items
-$cart_query = "SELECT * FROM cart_table WHERE order_id = ? AND signupid = ?";
-$stmt = $conn->prepare($cart_query);
-$stmt->bind_param("si", $order_id, $signupid);
+// Get user details
+$user_query = "SELECT * FROM signup WHERE signupid = ?";
+$stmt = $conn->prepare($user_query);
+$stmt->bind_param("i", $signupid);
 $stmt->execute();
-$cart_result = $stmt->get_result();
-$cart_items = $cart_result->fetch_all(MYSQLI_ASSOC);
+$user_result = $stmt->get_result();
+$user = $user_result->fetch_assoc();
 ?>
 
 <!DOCTYPE html>
@@ -40,32 +33,84 @@ $cart_items = $cart_result->fetch_all(MYSQLI_ASSOC);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Receipt - Order #<?php echo $order_id; ?></title>
+    <title>Payment Receipt</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
             padding: 20px;
         }
 
-        .receipt {
+        .receipt-container {
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
-            border: 1px solid #ddd;
             background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 40px;
         }
 
         .receipt-header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
             padding-bottom: 20px;
-            border-bottom: 2px solid #000;
+            border-bottom: 2px solid #eee;
         }
 
-        .receipt-details {
+        .receipt-header h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .receipt-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
             margin-bottom: 20px;
+        }
+
+        .receipt-section h2 {
+            color: #2c3e50;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .info-item {
+            margin-bottom: 10px;
+        }
+
+        .info-label {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .status-paid {
+            background-color: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 14px;
+            display: inline-block;
         }
 
         table {
@@ -75,103 +120,138 @@ $cart_items = $cart_result->fetch_all(MYSQLI_ASSOC);
         }
 
         th, td {
-            padding: 10px;
-            border: 1px solid #ddd;
+            padding: 12px 15px;
             text-align: left;
+            border-bottom: 1px solid #eee;
         }
 
         th {
-            background-color: #f5f5f5;
+            background-color: #f8f9fa;
+            color: #2c3e50;
+            font-weight: 600;
         }
 
         .total-row {
             font-weight: bold;
+            background-color: #f8f9fa;
+        }
+
+        .total-row td {
+            padding: 15px;
         }
 
         .print-button {
             text-align: center;
-            margin: 20px 0;
+            margin-top: 30px;
         }
 
         .print-button button {
-            padding: 10px 20px;
             background-color: #007bff;
             color: white;
             border: none;
+            padding: 12px 25px;
             border-radius: 5px;
+            font-size: 16px;
             cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .print-button button:hover {
+            background-color: #0056b3;
+        }
+
+        .thank-you {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+            color: #6c757d;
         }
 
         @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .receipt-container {
+                box-shadow: none;
+            }
+
             .print-button {
                 display: none;
             }
-            body {
-                padding: 0;
+        }
+
+        @media (max-width: 768px) {
+            .receipt-container {
+                padding: 20px;
             }
-            .receipt {
-                border: none;
+
+            .info-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-    <div class="receipt">
+    <div class="receipt-container">
         <div class="receipt-header">
             <h1>BabyCubs</h1>
-            <p>Order Receipt</p>
+            <p>Payment Receipt</p>
         </div>
 
-        <div class="receipt-details">
-            <p><strong>Order ID:</strong> <?php echo htmlspecialchars($order_id); ?></p>
-            <p><strong>Date:</strong> <?php echo date('d/m/Y', strtotime($payment['created_at'])); ?></p>
-            <p><strong>Payment ID:</strong> <?php echo htmlspecialchars($payment['payment_id']); ?></p>
-            <p><strong>Payment Method:</strong> <?php echo htmlspecialchars($payment['payment_method']); ?></p>
+        <div class="receipt-section">
+            <h2>Payment Details</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Payment ID</div>
+                    <div class="info-value"><?php echo htmlspecialchars($payment['payment_id']); ?></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Date</div>
+                    <div class="info-value"><?php echo date('d M Y, h:i A', strtotime($payment['created_at'])); ?></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Payment Method</div>
+                    <div class="info-value"><?php echo htmlspecialchars($payment['payment_method']); ?></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Status</div>
+                    <div class="info-value">
+                        <span class="status-paid">Paid</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <table>
-            <thead>
+        <div class="receipt-section">
+            <h2>Amount Details</h2>
+            <table>
                 <tr>
-                    <th>Product</th>
-                    <th>Price</th>
-                    <th>Quantity</th>
-                    <th>Total</th>
+                    <td>Total Amount</td>
+                    <td style="text-align: right;">₹<?php echo number_format($payment['amount'], 2); ?></td>
                 </tr>
-            </thead>
-            <tbody>
-                <?php 
-                $total = 0;
-                foreach ($cart_items as $item): 
-                    $itemTotal = $item['price'] * $item['quantity'];
-                    $total += $itemTotal;
-                ?>
-                <tr>
-                    <td><?php echo htmlspecialchars($item['product_name']); ?></td>
-                    <td>₹<?php echo number_format($item['price'], 2); ?></td>
-                    <td><?php echo htmlspecialchars($item['quantity']); ?></td>
-                    <td>₹<?php echo number_format($itemTotal, 2); ?></td>
-                </tr>
-                <?php endforeach; ?>
-                <tr class="total-row">
-                    <td colspan="3" style="text-align: right;"><strong>Total Amount:</strong></td>
-                    <td>₹<?php echo number_format($total, 2); ?></td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div class="receipt-details">
-            <p><strong>Shipping Address:</strong></p>
-            <p><?php echo nl2br(htmlspecialchars($order['shipping_address'])); ?></p>
+            </table>
         </div>
 
-        <div style="text-align: center; margin-top: 30px;">
-            <p>Thank you for shopping with BabyCubs!</p>
+        <?php if (!empty($user['address'])): ?>
+        <div class="receipt-section">
+            <h2>Shipping Address</h2>
+            <p><?php echo nl2br(htmlspecialchars($user['address'])); ?></p>
+        </div>
+        <?php endif; ?>
+
+        <div class="thank-you">
+            <p>Thank you for your purchase!</p>
             <p>For any queries, please contact our customer support.</p>
         </div>
-    </div>
 
-    <div class="print-button">
-        <button onclick="window.print()">Print Receipt</button>
+        <div class="print-button">
+            <button onclick="window.print()">
+                <i class="fas fa-print"></i> Print Receipt
+            </button>
+        </div>
     </div>
 </body>
 </html> 
