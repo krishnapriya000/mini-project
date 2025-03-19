@@ -47,6 +47,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 if (password_verify($password, $row['password'])) {
                     // Set all necessary session variables
                     $_SESSION['user_id'] = $row['signupid'];
+                    $_SESSION['signupid'] = $row['signupid']; // Ensure this line is present
                     $_SESSION['username'] = $row['username'];
                     $_SESSION['reg_type'] = $row['reg_type'];
                     
@@ -55,8 +56,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         $_SESSION['seller_id'] = $row['seller_id'];
                     }
 
-                    // Log the login attempt
-                    error_log("Successful login - Username: $username, Type: " . $row['reg_type']);
+                    // Debug session variables
+                    error_log("Session variables after login: " . print_r($_SESSION, true));
 
                     // Insert login record
                     $login_sql = "INSERT INTO login (signup_id, login_date) VALUES (?, CURDATE())";

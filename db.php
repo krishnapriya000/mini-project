@@ -116,54 +116,155 @@ if ($conn->query($alter_query) === TRUE) {
 // $drop_order_table = "DROP TABLE IF EXISTS order_table";
 // $conn->query($drop_order_table);
 
-// Create modified order_table
-$order_table = "CREATE TABLE IF NOT EXISTS order_table (
-    order_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL,
-    phone VARCHAR(20) NOT NULL,
+// // Create modified order_table
+// $order_table = "CREATE TABLE IF NOT EXISTS order_table (
+//     order_id INT AUTO_INCREMENT PRIMARY KEY,
+//     user_id INT NOT NULL,
+//     name VARCHAR(100) NOT NULL,
+//     email VARCHAR(100) NOT NULL,
+//     phone VARCHAR(20) NOT NULL,
+//     shipping_address VARCHAR(255) NOT NULL,
+//     city VARCHAR(100) NOT NULL,
+//     state VARCHAR(100) NOT NULL,
+//     pincode VARCHAR(10) NOT NULL,
+//     total_amount DECIMAL(10,2) NOT NULL,
+//     status_name ENUM('pending', 'shipped', 'delivered', 'cancelled') NOT NULL DEFAULT 'pending',
+//     payment_method ENUM('cod', 'online') DEFAULT 'cod',
+//     payment_status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
+//     tracking_number VARCHAR(50) DEFAULT NULL,
+//     razorpay_order_id VARCHAR(100) NULL,
+//     razorpay_payment_id VARCHAR(100) NULL,
+//     razorpay_signature VARCHAR(255) NULL,
+//     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+//     FOREIGN KEY (user_id) REFERENCES user_table(user_id) ON DELETE CASCADE
+// )";
+
+// if ($conn->query($order_table) === TRUE) {
+//     //echo "Order table modified successfully<br>";
+// } else {
+//     echo "Error modifying order table: " . $conn->error . "<br>";
+// }
+
+// // // Create order_items table if it doesn't exist
+// // $order_items_table = "CREATE TABLE IF NOT EXISTS order_items (
+// //     order_item_id INT PRIMARY KEY AUTO_INCREMENT,
+// //     order_id INT NOT NULL,
+// //     product_id INT NOT NULL,
+// //     quantity INT NOT NULL,
+// //     price DECIMAL(10,2) NOT NULL,
+// //     subtotal DECIMAL(10,2) NOT NULL,
+// //     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+// //     FOREIGN KEY (order_id) REFERENCES order_table(order_id) ON DELETE CASCADE,
+// //     FOREIGN KEY (product_id) REFERENCES product_table(product_id) ON DELETE RESTRICT
+// // )";
+
+// // if ($conn->query($order_items_table) === TRUE) {
+// //     //echo "Order items table created successfully<br>";
+// // } else {
+// //     echo "Error creating order items table: " . $conn->error . "<br>";
+// // }
+
+
+
+// // // Drop existing tables
+// // $dropOrdersTable = "DROP TABLE IF EXISTS orders_table";
+// // $dropOrderItemsTable = "DROP TABLE IF EXISTS order_items";
+
+// // // Execute drop queries
+// // if ($conn->query($dropOrdersTable) === TRUE) {
+// //     echo "orders_table dropped successfully.<br>";
+// // } else {
+// //     echo "Error dropping orders_table: " . $conn->error . "<br>";
+// // }
+
+// // if ($conn->query($dropOrderItemsTable) === TRUE) {
+// //     echo "order_items table dropped successfully.<br>";
+// // } else {
+// //     echo "Error dropping order_items table: " . $conn->error . "<br>";
+// // }
+
+
+
+
+// // Create orders_table
+// $createOrdersTable = "
+// CREATE TABLE orders_table (
+//     id INT AUTO_INCREMENT PRIMARY KEY,
+//     order_id VARCHAR(100) NOT NULL UNIQUE,
+//     signupid INT NOT NULL,
+//     fullname VARCHAR(255) NOT NULL,
+//     email VARCHAR(255) NOT NULL,
+//     phone VARCHAR(20) NOT NULL,
+//     shipping_address TEXT NOT NULL,
+//     payment_id VARCHAR(100) NOT NULL,
+//     total_amount DECIMAL(10, 2) NOT NULL,
+//     order_status ENUM('processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'processing',
+//     payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending',
+//     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+//     FOREIGN KEY (signupid) REFERENCES user_table(signupid) ON DELETE CASCADE
+// );
+// ";
+// $conn->query($createOrdersTable);
+
+// // Create order_items table
+// $createOrderItemsTable = "
+// CREATE TABLE order_items (
+//     id INT AUTO_INCREMENT PRIMARY KEY,
+//     order_id VARCHAR(100) NOT NULL,
+//     signupid INT NOT NULL,
+//     product_id INT NOT NULL,
+//     product_name VARCHAR(255) NOT NULL,
+//     quantity INT NOT NULL,
+//     price DECIMAL(10, 2) NOT NULL,
+//     subtotal DECIMAL(10, 2) NOT NULL,
+//     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//     FOREIGN KEY (signupid) REFERENCES user_table(signupid) ON DELETE CASCADE,
+//     FOREIGN KEY (order_id) REFERENCES orders_table(order_id) ON DELETE CASCADE
+// );
+// ";
+// $conn->query($createOrderItemsTable);
+
+// echo "Tables dropped and re-created successfully!";
+
+// First create the orders_table without the payment_id foreign key constraint
+// First create the orders_table without the payment_id foreign key constraint
+$createOrdersTable = "CREATE TABLE IF NOT EXISTS orders_table (
+    order_id VARCHAR(100) NOT NULL PRIMARY KEY,
+    signupid INT NOT NULL,
+    payment_id VARCHAR(100),
+    total_amount DECIMAL(10, 2) NOT NULL,
     shipping_address VARCHAR(255) NOT NULL,
-    city VARCHAR(100) NOT NULL,
-    state VARCHAR(100) NOT NULL,
-    pincode VARCHAR(10) NOT NULL,
-    total_amount DECIMAL(10,2) NOT NULL,
-    status_name ENUM('pending', 'shipped', 'delivered', 'cancelled') NOT NULL DEFAULT 'pending',
-    payment_method ENUM('cod', 'online') DEFAULT 'cod',
-    payment_status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
-    tracking_number VARCHAR(50) DEFAULT NULL,
-    razorpay_order_id VARCHAR(100) NULL,
-    razorpay_payment_id VARCHAR(100) NULL,
-    razorpay_signature VARCHAR(255) NULL,
-    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES user_table(user_id) ON DELETE CASCADE
-)";
-
-if ($conn->query($order_table) === TRUE) {
-    //echo "Order table modified successfully<br>";
-} else {
-    echo "Error modifying order table: " . $conn->error . "<br>";
-}
-
-// Create order_items table if it doesn't exist
-$order_items_table = "CREATE TABLE IF NOT EXISTS order_items (
-    order_item_id INT PRIMARY KEY AUTO_INCREMENT,
-    order_id INT NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    subtotal DECIMAL(10,2) NOT NULL,
+    order_status VARCHAR(50) DEFAULT 'processing',
+    payment_status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES order_table(order_id) ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES product_table(product_id) ON DELETE RESTRICT
-)";
+    FOREIGN KEY (signupid) REFERENCES signup(signupid) ON DELETE CASCADE
+) ENGINE=InnoDB;";
+$conn->query($createOrdersTable);
 
-if ($conn->query($order_items_table) === TRUE) {
-    //echo "Order items table created successfully<br>";
-} else {
-    echo "Error creating order items table: " . $conn->error . "<br>";
-}
+// Then create the payment_table with references to orders_table and signup table
+$createPaymentTable = "CREATE TABLE IF NOT EXISTS payment_table (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id VARCHAR(100) NOT NULL,
+    signupid INT NOT NULL,
+    payment_id VARCHAR(100) NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    payment_method VARCHAR(50) NOT NULL,
+    payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_payment_signupid FOREIGN KEY (signupid) REFERENCES signup(signupid) ON DELETE CASCADE,
+    CONSTRAINT fk_payment_orderid FOREIGN KEY (order_id) REFERENCES orders_table(order_id) ON DELETE CASCADE
+) ENGINE=InnoDB;";
+$conn->query($createPaymentTable);
+
+// If you need payment_id as foreign key in orders_table, add it after both tables exist
+$alterOrdersTable = "ALTER TABLE orders_table
+    ADD CONSTRAINT fk_orders_paymentid FOREIGN KEY (payment_id) REFERENCES payment_table(payment_id) ON UPDATE CASCADE;";
+// Only run this if you need payment_id as a foreign key
+// $conn->query($alterOrdersTable);
+
+echo "Tables created successfully!";
 
 $review_table = "CREATE TABLE IF NOT EXISTS review_table (
     review_id INT AUTO_INCREMENT PRIMARY KEY,

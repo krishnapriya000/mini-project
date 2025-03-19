@@ -100,20 +100,20 @@ $categories_result = $conn->query($categories_query);
         /* Sidebar Styles */
         .sidebar {
             width: 250px;
-            background-color: #2b2d42;
+            background-color:rgb(179, 69, 10);
             color: white;
             height: 100vh;
             padding: 20px 0;
             position: fixed;
             overflow-y: auto;
             scrollbar-width: thin;
-            scrollbar-color: #3d3f54 #2b2d42;
+            scrollbar-color: rgb(241, 124, 61) rgb(244, 123, 59);
         }
 
         .brand-name {
             font-size: 24px;
             padding: 20px;
-            border-bottom: 1px solid #3d3f54;
+            border-bottom: 1px solid rgb(179, 69, 10);
         }
 
         .nav-items {
@@ -136,11 +136,11 @@ $categories_result = $conn->query($categories_query);
         }
 
         .nav-item:hover {
-            background-color: #3d3f54;
+            background-color: rgb(179, 69, 10);
         }
 
         .nav-item.active {
-            background-color: #3d3f54;
+            background-color: rgb(179, 69, 10);
             border-left: 4px solid #fff;
         }
 
@@ -159,11 +159,11 @@ $categories_result = $conn->query($categories_query);
             background-color: white;
             padding: 15px 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgb(179, 69, 10);
         }
 
         .header h2 {
-            color: #2b2d42;
+            color: rgb(179, 69, 10);
             font-size: 24px;
         }
 
@@ -231,7 +231,7 @@ $categories_result = $conn->query($categories_query);
         }
 
         .data-table th {
-            background-color: #2b2d42;
+            background-color: rgb(179, 69, 10);
             color: white;
             font-weight: 500;
         }

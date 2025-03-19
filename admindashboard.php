@@ -313,6 +313,7 @@ $sellersResult = mysqli_query($conn, "SELECT * FROM seller");
             <li><a href="#Manage Users">Manage Users</a></li>
             <li><a href="#Manage Seller">Manage Sellers</a></li>
             <li><a href="manage categories.php">Manage Categories</a></li>
+            <li><a href="#">Orders</a></li>
             <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
 
         </ul>

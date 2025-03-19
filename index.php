@@ -433,7 +433,7 @@ session_start();
             </ul>
             <div class="search-cart">
                 <input type="search" placeholder="Search products..." class="search-box">
-                <a href="#" class="nav-link">🛒</a>
+                <a href="cart.php" class="nav-link">🛒</a>
                 <div class="profile-icon-container">
     <?php if (isset($_SESSION['username'])): ?>
         <div class="profile-icon">

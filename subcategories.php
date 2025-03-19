@@ -372,7 +372,7 @@ $selected_category = isset($_GET['category_id']) ? $_GET['category_id'] : '';
         <div class="brand-name">BabyCubs</div>
         <ul class="nav-items">
             <li class="nav-item">
-                <a href="dd.php"><i class="fas fa-list"></i> Categories</a>
+                <a href="manage categories.php"><i class="fas fa-list"></i> Categories</a>
             </li>
             <li class="nav-item active">
                 <a href="subcategories.php"><i class="fas fa-sitemap"></i> Subcategories</a>

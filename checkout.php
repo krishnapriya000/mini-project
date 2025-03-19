@@ -12,8 +12,8 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 $signupid = null;
 
-// Try to get signupid from user_table
-$get_user_query = "SELECT * FROM user_table WHERE user_id = ?";
+// Try to get signupid from signup table
+$get_user_query = "SELECT * FROM signup WHERE signupid = ?";
 $stmt = $conn->prepare($get_user_query);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -25,10 +25,11 @@ if ($user_result && $user_result->num_rows > 0) {
 } else {
     // If no rows returned, initialize empty user_data to avoid null errors
     $user_data = array(
-        'name' => '',
+        'username' => '',
         'email' => '',
         'phone' => '',
-        'address' => ''
+        'address' => '',
+        'city' => ''
     );
 }
 
@@ -48,6 +49,30 @@ if (!$signupid) {
     // Display error and link to login
     echo "Session error: User identification not found. Please <a href='login.php'>login again</a>.";
     exit();
+}
+
+// Fetch user details (username, email, phone) from the database
+$user_details = array(
+    'username' => '',
+    'email' => '',
+    'phone' => '',
+    'address' => '',
+    'city' => ''
+);
+
+if ($signupid) {
+    $user_query = "SELECT username, email, phone, address, city 
+                   FROM signup 
+                   WHERE signupid = ? 
+                   LIMIT 1";
+    $stmt = $conn->prepare($user_query);
+    $stmt->bind_param("i", $signupid);
+    $stmt->execute();
+    $user_result = $stmt->get_result();
+
+    if ($user_result && $user_result->num_rows > 0) {
+        $user_details = $user_result->fetch_assoc();
+    }
 }
 
 // Fetch cart items
@@ -89,8 +114,24 @@ $razorpay_key_id = "rzp_test_Z4RWNiIGZc3YxK";
 
 // Create a unique order ID
 $order_id = 'ORD' . time() . $user_id;
-?>
 
+// Function to store order details in the database
+function storeOrderDetails($conn, $order_id, $signupid, $payment_id, $total_amount, $shipping_address) {
+    $insert_order_query = "INSERT INTO orders_table (order_id, signupid, payment_id, total_amount, shipping_address) VALUES (?, ?, ?, ?, ?)";
+    $stmt = $conn->prepare($insert_order_query);
+    $stmt->bind_param("sisds", $order_id, $signupid, $payment_id, $total_amount, $shipping_address);
+    return $stmt->execute();
+}
+
+// Function to store payment details in the database
+function storePaymentDetails($conn, $order_id, $signupid, $payment_id, $amount, $payment_method, $payment_status) {
+    $insert_payment_query = "INSERT INTO payment_table (order_id, signupid, payment_id, amount, payment_method, payment_status) VALUES (?, ?, ?, ?, ?, ?)";
+    $stmt = $conn->prepare($insert_payment_query);
+    $stmt->bind_param("sisdss", $order_id, $signupid, $payment_id, $amount, $payment_method, $payment_status);
+    return $stmt->execute();
+}
+
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -358,27 +399,27 @@ $order_id = 'ORD' . time() . $user_id;
                 
                 <div class="form-group">
                     <label class="form-label">Full Name</label>
-                    <input type="text" class="form-input" id="fullname" value="<?php echo htmlspecialchars($user_data['name'] ?? ''); ?>" required>
+                    <input type="text" class="form-input" id="fullname" value="<?php echo htmlspecialchars($user_details['username'] ?? ''); ?>" required>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label">Email</label>
-                    <input type="email" class="form-input" id="email" value="<?php echo htmlspecialchars($user_data['email'] ?? ''); ?>" required>
+                    <input type="email" class="form-input" id="email" value="<?php echo htmlspecialchars($user_details['email'] ?? ''); ?>" required>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label">Phone</label>
-                    <input type="tel" class="form-input" id="phone" value="<?php echo htmlspecialchars($user_data['phone'] ?? ''); ?>" required>
+                    <input type="tel" class="form-input" id="phone" value="<?php echo htmlspecialchars($user_details['phone'] ?? ''); ?>" required>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label">Address</label>
-                    <input type="text" class="form-input" id="address" value="<?php echo htmlspecialchars($user_data['address'] ?? ''); ?>" required>
+                    <input type="text" class="form-input" id="address" value="<?php echo htmlspecialchars($user_details['address'] ?? ''); ?>" required>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label">City</label>
-                    <input type="text" class="form-input" id="city" required>
+                    <input type="text" class="form-input" id="city" value="<?php echo htmlspecialchars($user_details['city'] ?? ''); ?>" required>
                 </div>
                 
                 <div class="form-group">

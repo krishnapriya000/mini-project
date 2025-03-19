@@ -88,7 +88,7 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
         /* Sidebar Styles */
         .sidebar {
             width: 250px;
-            background-color: #2b2d42;
+            background-color: rgb(179, 69, 10);
             color: white;
             height: 100vh;
             padding: 20px 0;
@@ -98,7 +98,7 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
         .brand-name {
             font-size: 24px;
             padding: 20px;
-            border-bottom: 1px solid #3d3f54;
+            border-bottom: 1px solid rgb(179, 69, 10);
         }
 
         .nav-items {
@@ -121,11 +121,11 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
         }
 
         .nav-item:hover {
-            background-color: #3d3f54;
+            background-color: rgb(215, 170, 146);
         }
 
         .nav-item.active {
-            background-color: #3d3f54;
+            background-color: rgb(215, 170, 146);
             border-left: 4px solid #fff;
         }
 
@@ -149,7 +149,7 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
         }
 
         .header h2 {
-            color: #2b2d42;
+            color:rgb(179, 69, 10);
             font-size: 24px;
         }
 
@@ -216,7 +216,7 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
         }
 
         .data-table th {
-            background-color: #2b2d42;
+            background-color: rgb(179, 69, 10);
             color: white;
             font-weight: 500;
         }
@@ -381,7 +381,7 @@ $selected_subcategory = isset($_GET['subcategory_id']) ? $_GET['subcategory_id']
         <div class="brand-name">BabyCubs</div>
         <ul class="nav-items">
             <li class="nav-item">
-                <a href="dd.php"><i class="fas fa-list"></i> Categories</a>
+                <a href="manage categories.php"><i class="fas fa-list"></i> Categories</a>
             </li>
             <li class="nav-item">
                 <a href="subcategories.php"><i class="fas fa-sitemap"></i> Subcategories</a>
