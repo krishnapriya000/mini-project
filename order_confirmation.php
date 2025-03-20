@@ -2,30 +2,33 @@
 session_start();
 require_once($_SERVER['DOCUMENT_ROOT'] . '/baby/connect.php');
 
-if (!isset($_SESSION['signupid'])) {
-    header("Location: error.php");
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
     exit();
 }
 
-$signupid = $_SESSION['signupid'];
+// Get user's orders
+$query = "SELECT o.*, 
+          p.name as product_name, 
+          p.image_url, 
+          p.price, 
+          ci.quantity
+          FROM orders_table o
+          LEFT JOIN cart_items ci ON o.order_id = ci.order_id
+          LEFT JOIN product_table p ON ci.product_id = p.product_id
+          WHERE o.signupid = ?
+          ORDER BY o.created_at DESC";
 
-// Fetch latest payment details
-$payment_query = "SELECT * FROM payment_table 
-                 WHERE signupid = ? AND payment_status = 'paid'
-                 ORDER BY created_at DESC LIMIT 1";
-$stmt = $conn->prepare($payment_query);
-$stmt->bind_param("i", $signupid);
-$stmt->execute();
-$payment_result = $stmt->get_result();
-$payment = $payment_result->fetch_assoc();
-
-// Get user details
-$user_query = "SELECT * FROM signup WHERE signupid = ?";
-$stmt = $conn->prepare($user_query);
-$stmt->bind_param("i", $signupid);
-$stmt->execute();
-$user_result = $stmt->get_result();
-$user = $user_result->fetch_assoc();
+try {
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage();
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
@@ -33,274 +36,224 @@ $user = $user_result->fetch_assoc();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Confirmation - BabyCubs</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>My Orders</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        * {
+        body {
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            background-color: #f4f4f4;
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f2f5;
-            padding: 20px;
-            color: #333;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            padding: 40px;
-        }
-
         .header {
-            text-align: center;
-            margin-bottom: 40px;
+            background-color: #333;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-
-        .header h1 {
-            color: #2c3e50;
-            font-size: 32px;
-            margin-bottom: 10px;
+        .header .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
         }
-
-        .success-icon {
-            color: #28a745;
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
-
-        .order-section {
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-        }
-
-        .order-section h2 {
-            color: #2c3e50;
-            font-size: 20px;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #eee;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
+        .header .nav-links {
+            display: flex;
+            align-items: center;
             gap: 20px;
         }
-
-        .info-item {
+        .header .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            transition: color 0.3s ease;
+        }
+        .header .nav-links a:hover {
+            color: #ddd;
+        }
+        .header .cart-icon {
+            position: relative;
+            color: white;
+            font-size: 20px;
+            text-decoration: none;
+        }
+        .header .cart-icon .cart-count {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background-color: red;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 12px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .order-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            padding: 15px;
+        }
+        .order-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
             margin-bottom: 15px;
         }
-
-        .info-label {
-            color: #6c757d;
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-
-        .info-value {
-            color: #2c3e50;
-            font-weight: 500;
-        }
-
-        .status-paid {
-            background-color: #28a745;
-            color: white;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 14px;
-            display: inline-block;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-
-        th, td {
+        .product-item {
+            display: flex;
+            align-items: center;
             padding: 15px;
-            text-align: left;
             border-bottom: 1px solid #eee;
         }
-
-        th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .product-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
         .product-image {
-            width: 60px;
-            height: 60px;
+            width: 100px;
+            height: 100px;
             object-fit: cover;
-            border-radius: 5px;
+            border-radius: 8px;
+            margin-right: 20px;
         }
-
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 30px;
+        .product-details {
+            flex-grow: 1;
         }
-
-        .btn {
-            padding: 12px 25px;
-            border-radius: 5px;
+        .product-name {
             font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .product-meta {
+            color: #666;
+            font-size: 14px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 14px;
+            margin-left: 5px;
+        }
+        .status-processing { background-color: #fff3cd; color: #856404; }
+        .status-completed { background-color: #d4edda; color: #155724; }
+        .status-pending { background-color: #cce5ff; color: #004085; }
+        .status-paid { background-color: #d4edda; color: #155724; }
+        .print-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
             cursor: pointer;
-            text-decoration: none;
-            transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 5px;
         }
-
-        .btn-primary {
-            background-color: #007bff;
-            color: white;
-            border: none;
-        }
-
-        .btn-secondary {
-            background-color: #6c757d;
-            color: white;
-            border: none;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            opacity: 0.9;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-
-            .info-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .action-buttons {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
+        .print-button:hover {
+            background-color: #45a049;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <i class="fas fa-check-circle success-icon"></i>
-            <h1>Order Confirmed!</h1>
-            <p>Thank you for shopping with BabyCubs</p>
-        </div>
-
-        <div class="order-section">
-            <h2>Order Details</h2>
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">Order Date</div>
-                    <div class="info-value">
-                        <?php echo date('d M Y, h:i A', strtotime($payment['created_at'])); ?>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Payment ID</div>
-                    <div class="info-value"><?php echo htmlspecialchars($payment['payment_id']); ?></div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Payment Method</div>
-                    <div class="info-value"><?php echo htmlspecialchars($payment['payment_method']); ?></div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Status</div>
-                    <div class="info-value">
-                        <span class="status-paid">Paid</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="order-section">
-            <h2>Order Summary</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Price</th>
-                        <th>Quantity</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    // Fetch ordered items
-                    $items_query = "SELECT * FROM cart_table WHERE signupid = ? AND status = 'ordered'";
-                    $stmt = $conn->prepare($items_query);
-                    $stmt->bind_param("i", $signupid);
-                    $stmt->execute();
-                    $items_result = $stmt->get_result();
-                    $total = 0;
-
-                    while ($item = $items_result->fetch_assoc()):
-                        $itemTotal = $item['price'] * $item['quantity'];
-                        $total += $itemTotal;
-                    ?>
-                    <tr>
-                        <td>
-                            <div class="product-info">
-                                <span><?php echo htmlspecialchars($item['product_name']); ?></span>
-                            </div>
-                        </td>
-                        <td>₹<?php echo number_format($item['price'], 2); ?></td>
-                        <td><?php echo htmlspecialchars($item['quantity']); ?></td>
-                        <td>₹<?php echo number_format($itemTotal, 2); ?></td>
-                    </tr>
-                    <?php endwhile; ?>
-                    <tr class="total-row">
-                        <td colspan="3" style="text-align: right;"><strong>Total Amount:</strong></td>
-                        <td><strong>₹<?php echo number_format($total, 2); ?></strong></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <?php if (!empty($user['address'])): ?>
-        <div class="order-section">
-            <h2>Shipping Address</h2>
-            <p><?php echo nl2br(htmlspecialchars($user['address'])); ?></p>
-        </div>
-        <?php endif; ?>
-
-        <div class="action-buttons">
-            <a href="print_receipt.php" class="btn btn-primary" target="_blank">
-                <i class="fas fa-print"></i> Print Receipt
-            </a>
-            <a href="index.php" class="btn btn-secondary">
-                <i class="fas fa-home"></i> Continue Shopping
+    <div class="header">
+        <a href="index.php" class="logo">BABYCUBS</a>
+        <div class="nav-links">
+            <a href="index.php">Home</a>
+           
+            <a href="order_confirmation.php">My Orders</a>
+            
+            <a href="cart.php" class="cart-icon">
+                <i class="fas fa-shopping-cart"></i>
+                <a href="logout.php">Logout</a>
             </a>
         </div>
     </div>
+
+    <div class="container">
+        <h1 style="text-align: center; margin-bottom: 30px;">My Orders</h1>
+
+        <?php if ($result && $result->num_rows > 0): ?>
+            <?php 
+            $current_order = null;
+            
+            while ($row = $result->fetch_assoc()):
+                if ($current_order !== $row['order_id']):
+                    if ($current_order !== null):
+                        echo "</div>"; // Close previous order card
+                    endif;
+                    $current_order = $row['order_id'];
+            ?>
+                <div class="order-card">
+                    <div class="order-header">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <h2>Order #<?php echo htmlspecialchars($row['order_id']); ?></h2>
+                                <p>Ordered on: <?php echo date('d M Y, h:i A', strtotime($row['created_at'])); ?></p>
+                            </div>
+                            <button class="print-button" onclick="printOrder('<?php echo $row['order_id']; ?>')">
+                                <i class="fas fa-download"></i> Download Receipt
+                            </button>
+                        </div>
+                        <p>
+                            <strong>Order Status:</strong>
+                            <span class="status-badge status-<?php echo strtolower($row['order_status']); ?>">
+                                <?php echo ucfirst($row['order_status']); ?>
+                            </span>
+                        </p>
+                        <p>
+                            <strong>Payment Status:</strong>
+                            <span class="status-badge status-<?php echo strtolower($row['payment_status']); ?>">
+                                <?php echo ucfirst($row['payment_status']); ?>
+                            </span>
+                        </p>
+                    </div>
+            <?php 
+                endif;
+                if ($row['product_name']): // Only show if product exists
+            ?>
+                    <div class="product-item">
+                        <img src="uploads/<?php echo htmlspecialchars($row['image_url']); ?>" 
+                             alt="<?php echo htmlspecialchars($row['product_name']); ?>"
+                             class="product-image"
+                             onerror="this.src='placeholder.jpg'">
+                        <div class="product-details">
+                            <div class="product-name"><?php echo htmlspecialchars($row['product_name']); ?></div>
+                            <div class="product-meta">
+                                <div>Quantity: <?php echo intval($row['quantity']); ?></div>
+                                <div>Price: ₹<?php echo number_format(floatval($row['price']), 2); ?></div>
+                            </div>
+                        </div>
+                    </div>
+            <?php 
+                endif;
+            endwhile;
+            
+            if ($current_order !== null):
+                echo "</div>"; // Close last order card
+            endif;
+            ?>
+
+        <?php else: ?>
+            <div style="text-align: center; padding: 40px;">
+                <p>No orders found.</p>
+                <a href="index.php" style="color: #007bff; text-decoration: none;">Continue Shopping</a>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <script>
+    function printOrder(orderId) {
+        const printWindow = window.open(`print_receipt.php?order_id=${orderId}`, '_blank');
+        printWindow.onload = function() {
+            printWindow.print();
+        };
+    }
+    </script>
 </body>
-</html>
 </html>

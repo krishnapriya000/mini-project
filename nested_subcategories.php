@@ -730,7 +730,7 @@ $categories_result = $conn->query($categories_query);
                 });
         }
 
-        function loadModalSubcategories(categoryId, mode = 'add') {
+        async function loadModalSubcategories(categoryId, mode = 'add') {
             const selectId = mode === 'edit' ? 'editModalSubcategorySelect' : 'modalSubcategorySelect';
             if (!categoryId) {
                 document.getElementById(selectId).innerHTML = '<option value="">Select Subcategory</option>';
@@ -793,3 +793,13 @@ $categories_result = $conn->query($categories_query);
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.innerHTML = `
+                    <input type="hidden" name="action" value="delete_nested_subcategory">
+                    <input type="hidden" name="nested_id" value="${nestedId}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+</body>
+</html>

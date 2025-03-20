@@ -354,16 +354,21 @@ if (!$conn->query($brand_table)) {
 
 
 $cart_table = "CREATE TABLE IF NOT EXISTS cart_table (
-    cart_id INT AUTO_INCREMENT PRIMARY KEY,
-    signupid INT NOT NULL,
+    cart_id INT(11) NOT NULL AUTO_INCREMENT,
+    signupid INT(11) NOT NULL,
+    product_id INT(11) NOT NULL,
+    status ENUM('active', 'completed', 'abandoned') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    status ENUM('active', 'completed', 'abandoned') DEFAULT 'active',
-    FOREIGN KEY (signupid) REFERENCES signup(signupid) ON DELETE CASCADE
+    PRIMARY KEY (cart_id),
+    FOREIGN KEY (signupid) REFERENCES signup(signupid),
+    FOREIGN KEY (product_id) REFERENCES product_table(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
-if (!$conn->query($cart_table)) {
-    echo "Error creating cart table: " . $conn->error . "<br>";
+if ($conn->query($cart_table) === TRUE) {
+    echo "Cart table created successfully";
+} else {
+    echo "Error creating cart table: " . $conn->error;
 }
 
 $cart_items_table = "CREATE TABLE IF NOT EXISTS cart_items (
@@ -436,7 +441,22 @@ if ($conn->query($shipping_addresses) === TRUE) {
     echo "Error creating shipping addresses table: " . $conn->error . "<br>";
 }
 
+// SQL to add order_id column if it doesn't exist
+$check_column = "SHOW COLUMNS FROM cart_items LIKE 'order_id'";
+$result = $conn->query($check_column);
 
+if ($result->num_rows == 0) {
+    // Add order_id column
+    $alter_table = "ALTER TABLE cart_items 
+                   ADD COLUMN order_id varchar(100) DEFAULT NULL,
+                   ADD FOREIGN KEY (order_id) REFERENCES orders_table(order_id)";
+    
+    if ($conn->query($alter_table) === TRUE) {
+        echo "Table cart_items modified successfully";
+    } else {
+        echo "Error modifying table: " . $conn->error;
+    }
+}
 
 // Close the connection
 //$conn->close();

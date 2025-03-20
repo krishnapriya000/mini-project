@@ -43,4 +43,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['product_id'])) {
 } else {
     echo json_encode(["status" => "error", "message" => "Invalid request"]);
 }
+
+// Add this to check your cart data
+$debug_query = "SELECT * FROM cart_table WHERE signupid = ?";
+$stmt = $conn->prepare($debug_query);
+$stmt->bind_param("i", $_SESSION['signupid']);
+$stmt->execute();
+$result = $stmt->get_result();
+
+echo "<pre>";
+while ($row = $result->fetch_assoc()) {
+    print_r($row);
+}
+echo "</pre>";
 ?>
