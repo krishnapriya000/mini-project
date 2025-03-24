@@ -98,28 +98,34 @@ try {
         }
 
         .search-box {
-            padding: 8px 15px;
-            border: 1px solid #ddd;
-            border-radius: 20px 0 0 20px;
+            padding: 10px 20px;
+            border: 2px solid #ddd;
+            border-radius: 25px 0 0 25px;
             width: 200px;
             height: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 10px rgba(0,123,255,0.2);
+            outline: none;
         }
 
         .search-button {
-            background-color: #007bff;
+            background: linear-gradient(45deg, #007bff, #00bfff);
             color: white;
             border: none;
-            border-radius: 0 20px 20px 0;
-            padding: 8px 15px;
+            border-radius: 0 25px 25px 0;
+            padding: 12px 20px;
             cursor: pointer;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            height: 42px;
+            transition: all 0.3s ease;
         }
 
         .search-button:hover {
-            background-color: #0056b3;
+            background: linear-gradient(45deg, #0056b3, #0098ff);
+            transform: translateX(2px);
         }
 
         /* Container Styles */
@@ -149,60 +155,102 @@ try {
 
         .product-card {
             background: white;
-            border-radius: 10px;
+            border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
         }
 
         .product-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
         }
 
         .product-image {
             width: 100%;
-            height: 250px;
-            object-fit: cover;
+            height: 200px;
+            object-fit: contain;
+            background-color: #f8f8f8;
+            padding: 10px;
+            box-sizing: border-box;
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover .product-image {
+            transform: scale(1.05);
         }
 
         .product-details {
-            padding: 20px;
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .product-name {
             font-size: 1.1em;
             margin: 0 0 10px 0;
             color: #333;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.3;
+            height: 2.6em;
         }
 
         .product-price {
             font-weight: bold;
             color: #007bff;
-            font-size: 1.2em;
+            font-size: 1.3em;
             margin: 10px 0;
+            transition: color 0.3s ease;
+        }
+
+        .product-card:hover .product-price {
+            color: #0056b3;
         }
 
         .product-description {
             color: #666;
             font-size: 0.9em;
             margin-bottom: 15px;
+            flex-grow: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
         }
 
         .btn {
             display: inline-block;
-            padding: 8px 20px;
-            background-color: #007bff;
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #007bff, #00bfff);
             color: white;
             text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
+            border-radius: 25px;
+            transition: all 0.3s ease;
             text-align: center;
             width: 100%;
             box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
         }
 
         .btn:hover {
-            background-color: #0056b3;
+            background: linear-gradient(45deg, #0056b3, #0098ff);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
         }
 
         .no-results {
@@ -227,21 +275,26 @@ try {
         }
 
         .pagination a {
-            padding: 8px 16px;
+            padding: 10px 20px;
             margin: 0 5px;
-            background-color: #007bff;
+            background: linear-gradient(45deg, #007bff, #00bfff);
             color: white;
             text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
         .pagination a:hover {
-            background-color: #0056b3;
+            background: linear-gradient(45deg, #0056b3, #0098ff);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.3);
         }
 
         .pagination a.active {
-            background-color: #0056b3;
+            background: linear-gradient(45deg, #0056b3, #0098ff);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.3);
         }
 
         /* Profile Icon Styles */
@@ -373,10 +426,10 @@ try {
             <div class="search-results">
                 <?php while ($product = $result->fetch_assoc()): ?>
                     <div class="product-card">
-                        <img src="seller/<?php echo htmlspecialchars($product['image_url']); ?>" 
+                        <img src="<?php echo htmlspecialchars($product['image_url']); ?>" 
                              alt="<?php echo htmlspecialchars($product['name']); ?>"
                              class="product-image"
-                             onerror="this.src='placeholder.jpg'">
+                             onerror="this.src='assets/images/placeholder.jpg'">
                         <div class="product-details">
                             <h3 class="product-name"><?php echo htmlspecialchars($product['name']); ?></h3>
                             <p class="product-description">

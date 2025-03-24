@@ -75,7 +75,7 @@ if ($signupid) {
     }
 }
 
-// Fetch user orders - ORDER BY created_at DESC to show latest orders first
+// Fetch user orders with their items and product details
 $orders_query = "SELECT * FROM orders_table 
                 WHERE signupid = ? 
                 ORDER BY created_at DESC";
@@ -420,6 +420,39 @@ $orders_result = $stmt->get_result();
                 margin-bottom: 10px;
             }
         }
+        
+        .order-products {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+        
+        .product-item {
+            position: relative;
+            min-width: 80px;
+        }
+        
+        .product-item img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        
+        .product-quantity {
+            position: absolute;
+            bottom: -5px;
+            right: -5px;
+            background: #3a77bf;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -501,6 +534,53 @@ $orders_result = $stmt->get_result();
                                 </div>
                             </div>
                             
+                            <div class="order-products">
+                                <?php
+                                // Safely get items from orders_table with proper error checking
+                                $items = [];
+                                if (isset($order['items']) && !empty($order['items'])) {
+                                    $items = json_decode($order['items'], true);
+                                }
+                                
+                                if ($items && is_array($items) && !empty($items)) {
+                                    foreach ($items as $item) {
+                                        // Fetch product details including image from product_table
+                                        $product_query = "SELECT p.*, pi.image_url 
+                                                        FROM product_table p 
+                                                        LEFT JOIN product_images pi ON p.product_id = pi.product_id 
+                                                        WHERE p.product_id = ? 
+                                                        LIMIT 1";
+                                        $stmt = $conn->prepare($product_query);
+                                        $stmt->bind_param("i", $item['product_id']);
+                                        $stmt->execute();
+                                        $product_result = $stmt->get_result();
+                                        $product_data = $product_result->fetch_assoc();
+                                        
+                                        // Set image path with proper directory structure
+                                        $imagePath = !empty($product_data['image_url']) 
+                                            ? 'uploads/' . htmlspecialchars($product_data ['image_url']) 
+                                            : 'images/placeholder.jpg';
+                                        ?>
+                                        <div class="product-item">
+                                            <img src="<?php echo $imagePath; ?>" 
+                                                 alt="<?php echo htmlspecialchars($product_data['product_name'] ?? 'Product Image'); ?>"
+                                                 onerror="this.src='images/placeholder.jpg'">
+                                            <span class="product-quantity">x<?php echo htmlspecialchars($item['quantity'] ?? 1); ?></span>
+                                        </div>
+                                        <?php
+                                    }
+                                } else {
+                                    // Fallback for orders without items data
+                                    ?>
+                                    <div class="product-item">
+                                        <img src="images/placeholder.jpg" alt="Order Item">
+                                        <span class="product-quantity">1</span>
+                                    </div>
+                                    <?php
+                                }
+                                ?>
+                            </div>
+                            
                             <div class="order-actions">
                                 <?php if ($order['order_status'] == 'processing'): ?>
                                     <a href="cancel_order.php?order_id=<?php echo urlencode($order['order_id']); ?>" class="action-btn cancel-btn" onclick="return confirm('Are you sure you want to cancel this order?');">
@@ -514,8 +594,9 @@ $orders_result = $stmt->get_result();
     </a>
 <?php endif; ?>
                                 
-                                <a href="view_details.php?order_id=<?php echo htmlspecialchars($order['order_id']); ?>" 
-                                   class="btn btn-primary">View Details</a>
+                                <a href="view_details.php" class="action-btn view-details-btn">
+                                    <i class="fas fa-eye"></i> View Details
+                                </a>
                             </div>
                         </div>
                     </div>
