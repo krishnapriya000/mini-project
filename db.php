@@ -264,7 +264,7 @@ $alterOrdersTable = "ALTER TABLE orders_table
 // Only run this if you need payment_id as a foreign key
 // $conn->query($alterOrdersTable);
 
-echo "Tables created successfully!";
+//echo "Tables created successfully!";
 
 $review_table = "CREATE TABLE IF NOT EXISTS review_table (
     review_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -276,6 +276,28 @@ $review_table = "CREATE TABLE IF NOT EXISTS review_table (
     FOREIGN KEY (product_id) REFERENCES product_table(product_id) ON DELETE CASCADE
 )";
 $conn->query($review_table);
+
+
+
+// Alter review_table to add a created_at column
+$alter_review_table = "ALTER TABLE review_table 
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP";
+$conn->query($alter_review_table);
+
+// Alter review_table to add an index on product_id
+$alter_review_table = "ALTER TABLE review_table 
+    ADD INDEX IF NOT EXISTS idx_product_id (product_id)";
+$conn->query($alter_review_table);
+
+// Alter review_table to modify the rating column to allow NULL values
+$alter_review_table = "ALTER TABLE review_table 
+    MODIFY COLUMN rating INT NULL";
+$conn->query($alter_review_table);
+
+// Alter review_table to drop the comment column (if needed)
+// $alter_review_table = "ALTER TABLE review_table 
+//     DROP COLUMN IF EXISTS comment";
+// $conn->query($alter_review_table);
 
 
 $subcategories_table = "CREATE TABLE IF NOT EXISTS subcategories (
@@ -366,7 +388,7 @@ $cart_table = "CREATE TABLE IF NOT EXISTS cart_table (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
 if ($conn->query($cart_table) === TRUE) {
-    echo "Cart table created successfully";
+    //echo "Cart table created successfully";
 } else {
     echo "Error creating cart table: " . $conn->error;
 }
@@ -452,7 +474,7 @@ if ($result->num_rows == 0) {
                    ADD FOREIGN KEY (order_id) REFERENCES orders_table(order_id)";
     
     if ($conn->query($alter_table) === TRUE) {
-        echo "Table cart_items modified successfully";
+        //echo "Table cart_items modified successfully";
     } else {
         echo "Error modifying table: " . $conn->error;
     }

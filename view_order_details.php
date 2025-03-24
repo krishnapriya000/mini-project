@@ -2,44 +2,89 @@
 session_start();
 require_once($_SERVER['DOCUMENT_ROOT'] . '/baby/connect.php');
 
-if (!isset($_SESSION['signupid']) || !isset($_GET['order_id'])) {
-    header("Location: error.php");
+// Ensure user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
     exit();
 }
 
-$order_id = $_GET['order_id'];
-$signupid = $_SESSION['signupid'];
+// Get user details
+$user_id = $_SESSION['user_id'];
+$signupid = null;
 
-// Fetch order details
-$query = "SELECT o.*, p.payment_id, p.payment_method, p.created_at as payment_date, p.payment_status
-          FROM orders_table o
-          JOIN payment_table p ON o.order_id = p.order_id
-          WHERE o.order_id = ? AND o.signupid = ?";
-
-$stmt = $conn->prepare($query);
-$stmt->bind_param("si", $order_id, $signupid);
+// Try to get signupid from signup table
+$get_user_query = "SELECT * FROM signup WHERE signupid = ?";
+$stmt = $conn->prepare($get_user_query);
+$stmt->bind_param("i", $user_id);
 $stmt->execute();
-$result = $stmt->get_result();
-$order = $result->fetch_assoc();
+$user_result = $stmt->get_result();
 
-if (!$order) {
-    header("Location: error.php");
+if ($user_result && $user_result->num_rows > 0) {
+    $user_data = $user_result->fetch_assoc();
+    $signupid = $user_data['signupid'] ?? null;
+} else {
+    // If no rows returned, initialize empty user_data to avoid null errors
+    $user_data = array(
+        'username' => '',
+        'email' => '',
+        'phone' => '',
+        'address' => '',
+        'city' => ''
+    );
+}
+
+// If signupid is still not found, try alternate methods
+if (!$signupid) {
+    // Check if it's directly in the session
+    $signupid = isset($_SESSION['signupid']) ? $_SESSION['signupid'] : null;
+    
+    // If still not found, try using user_id as signupid
+    if (!$signupid) {
+        $signupid = $user_id;
+    }
+}
+
+// Make sure we have a signupid before proceeding
+if (!$signupid) {
+    // Display error and link to login
+    echo "Session error: User identification not found. Please <a href='login.php'>login again</a>.";
     exit();
 }
 
-// Fetch order items
-$items_query = "SELECT ci.*, p.product_name, p.price, p.image
-                FROM cart_items ci
-                JOIN products p ON ci.product_id = p.product_id
-                JOIN cart_table ct ON ci.cart_id = ct.cart_id
-                WHERE ct.signupid = ? AND ci.status = 'ordered'
-                AND ct.order_id = ?";
+// Fetch user details
+$user_details = array(
+    'username' => '',
+    'email' => '',
+    'phone' => '',
+    'address' => '',
+    'city' => ''
+);
 
-$stmt = $conn->prepare($items_query);
-$stmt->bind_param("is", $signupid, $order_id);
+if ($signupid) {
+    $user_query = "SELECT username, email, phone, address, city 
+                   FROM signup 
+                   WHERE signupid = ? 
+                   LIMIT 1";
+    $stmt = $conn->prepare($user_query);
+    $stmt->bind_param("i", $signupid);
+    $stmt->execute();
+    $user_result = $stmt->get_result();
+
+    if ($user_result && $user_result->num_rows > 0) {
+        $user_details = $user_result->fetch_assoc();
+    }
+}
+
+// Fetch user orders - ORDER BY created_at DESC to show latest orders first
+$orders_query = "SELECT * FROM orders_table 
+                WHERE signupid = ? 
+                ORDER BY created_at DESC";
+
+$stmt = $conn->prepare($orders_query);
+$stmt->bind_param("i", $signupid);
 $stmt->execute();
-$items_result = $stmt->get_result();
-$items = $items_result->fetch_all(MYSQLI_ASSOC);
+$orders_result = $stmt->get_result();
+
 ?>
 
 <!DOCTYPE html>
@@ -47,268 +92,443 @@ $items = $items_result->fetch_all(MYSQLI_ASSOC);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Details - #<?php echo $order_id; ?></title>
+    <title>BabyCubs - My Orders</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Nunito', Arial, sans-serif;
         }
-
+        
         body {
-            background-color: #f8f9fa;
-            padding: 20px;
+            background-color: #f9f9f9;
+            color: #333;
         }
-
-        .container {
+        
+        .main-container {
             max-width: 1200px;
-            margin: 0 auto;
+            margin: 40px auto;
+            padding: 0 20px;
         }
-
-        .order-header {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-
-        .order-title {
-            font-size: 24px;
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        .order-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-
-        .info-group {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-        }
-
-        .info-label {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-
-        .info-value {
-            color: #333;
-            font-weight: 500;
-        }
-
-        .order-items {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        .items-table th {
-            background: #f8f9fa;
-            padding: 12px;
-            text-align: left;
-            font-weight: 600;
-            color: #333;
-            border-bottom: 2px solid #dee2e6;
-        }
-
-        .items-table td {
-            padding: 12px;
-            border-bottom: 1px solid #dee2e6;
-        }
-
-        .product-info {
+        
+        .page-title {
             display: flex;
             align-items: center;
-            gap: 15px;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eaeaea;
         }
-
-        .product-image {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 6px;
+        
+        .page-title-icon {
+            background-color: #3a77bf;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
         }
-
-        .status-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 500;
+        
+        .page-title h1 {
+            font-size: 28px;
+            color: #333;
+            font-weight: 700;
         }
-
-        .status-paid {
-            background: #d4edda;
-            color: #155724;
+        
+        .orders-container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            padding: 30px;
+            margin-bottom: 30px;
         }
-
-        .total-section {
-            background: white;
-            padding: 20px;
+        
+        .section-title {
+            font-size: 22px;
+            color: #3a77bf;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+            font-weight: 700;
+        }
+        
+        .order-card {
+            background-color: #fff;
             border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
         }
-
-        .total-row {
+        
+        .order-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+        
+        .order-header {
+            background-color: #f5f9ff;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
             display: flex;
             justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #dee2e6;
+            align-items: center;
+            flex-wrap: wrap;
         }
-
-        .total-row:last-child {
-            border-bottom: none;
+        
+        .order-id {
+            font-weight: 700;
+            color: #3a77bf;
+            font-size: 16px;
+        }
+        
+        .order-date {
+            color: #777;
+            font-size: 14px;
+        }
+        
+        .order-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
             font-weight: 600;
-            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-
-        .action-buttons {
+        
+        .status-processing {
+            background-color: #fff8e1;
+            color: #ff9800;
+            border: 1px solid #ffe082;
+        }
+        
+        .status-delivered {
+            background-color: #e8f5e9;
+            color: #4caf50;
+            border: 1px solid #c8e6c9;
+        }
+        
+        .status-cancelled {
+            background-color: #ffebee;
+            color: #f44336;
+            border: 1px solid #ffcdd2;
+        }
+        
+        .status-shipped {
+            background-color: #e3f2fd;
+            color: #2196f3;
+            border: 1px solid #bbdefb;
+        }
+        
+        .status-pending {
+            background-color: #f3e5f5;
+            color: #9c27b0;
+            border: 1px solid #e1bee7;
+        }
+        
+        .order-content {
+            padding: 20px;
+        }
+        
+        .order-summary {
             display: flex;
-            gap: 15px;
-            margin-top: 20px;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
         }
-
-        .btn {
-            padding: 12px 24px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 500;
+        
+        .order-details {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .detail-row {
+            margin-bottom: 8px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+            width: 140px;
+            margin-right: 10px;
+        }
+        
+        .detail-value {
+            color: #333;
+            flex: 1;
+        }
+        
+        .order-total {
+            font-size: 18px;
+            font-weight: 700;
+            color: #3a77bf;
+            text-align: right;
+            min-width: 150px;
+            margin-top: 10px;
+        }
+        
+        .order-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            outline: none;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
+            justify-content: center;
+            text-decoration: none;
         }
-
-        .btn-primary {
-            background: #007bff;
+        
+        .action-btn i {
+            margin-right: 8px;
+        }
+        
+        .cancel-btn {
+            background-color: #fff;
+            color: #f44336;
+            border: 1px solid #f44336;
+        }
+        
+        .cancel-btn:hover {
+            background-color: #f44336;
+            color: #fff;
+        }
+        
+        .review-btn {
+            background-color: #fff;
+            color: #ff9800;
+            border: 1px solid #ff9800;
+        }
+        
+        .review-btn:hover {
+            background-color: #ff9800;
+            color: #fff;
+        }
+        
+        .view-details-btn {
+            background-color: #fff;
+            color: #3a77bf;
+            border: 1px solid #3a77bf;
+        }
+        
+        .view-details-btn:hover {
+            background-color: #3a77bf;
+            color: #fff;
+        }
+        
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            color: #3a77bf;
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 20px;
+            transition: transform 0.2s ease;
+        }
+        
+        .back-btn:hover {
+            transform: translateX(-5px);
+        }
+        
+        .back-btn i {
+            margin-right: 8px;
+        }
+        
+        .empty-orders {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .empty-orders-icon {
+            font-size: 60px;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .empty-orders-text {
+            font-size: 18px;
+            color: #888;
+            margin-bottom: 20px;
+        }
+        
+        .shop-now-btn {
+            background-color: #3a77bf;
             color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s ease;
         }
-
-        .btn-secondary {
-            background: #28a745;
+        
+        .shop-now-btn:hover {
+            background-color: #2c5c94;
+        }
+        
+        /* Get products from cart */
+        .fetch-products-btn {
+            background-color: #673ab7;
             color: white;
+            margin-top: 10px;
+            border-radius: 4px;
+            padding: 5px 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
         }
-
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
+        
+        .fetch-products-btn:hover {
+            background-color: #5e35b1;
         }
-
+        
         @media (max-width: 768px) {
-            .order-info {
-                grid-template-columns: 1fr;
+            .order-header {
+                flex-direction: column;
+                align-items: flex-start;
             }
             
-            .items-table {
-                display: block;
-                overflow-x: auto;
+            .order-status {
+                margin-top: 10px;
+            }
+            
+            .order-actions {
+                flex-direction: column;
+            }
+            
+            .action-btn {
+                width: 100%;
+                margin-bottom: 10px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="order-header">
-            <h1 class="order-title">Order #<?php echo htmlspecialchars($order_id); ?></h1>
-            <div class="order-info">
-                <div class="info-group">
-                    <div class="info-label">Order Date</div>
-                    <div class="info-value"><?php echo date('d M Y, h:i A', strtotime($order['payment_date'])); ?></div>
-                </div>
-                <div class="info-group">
-                    <div class="info-label">Payment Status</div>
-                    <div class="info-value">
-                        <span class="status-badge status-paid">
-                            <?php echo htmlspecialchars($order['payment_status']); ?>
-                        </span>
-                    </div>
-                </div>
-                <div class="info-group">
-                    <div class="info-label">Payment Method</div>
-                    <div class="info-value"><?php echo htmlspecialchars($order['payment_method']); ?></div>
-                </div>
-                <div class="info-group">
-                    <div class="info-label">Payment ID</div>
-                    <div class="info-value"><?php echo htmlspecialchars($order['payment_id']); ?></div>
-                </div>
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Back Button -->
+        <a href="index.php" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Back to Homepage
+        </a>
+        
+        <!-- Page Title -->
+        <div class="page-title">
+            <div class="page-title-icon">
+                <i class="fas fa-box-open"></i>
             </div>
+            <h1>My Orders</h1>
         </div>
-
-        <div class="order-items">
-            <h2>Order Items</h2>
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Price</th>
-                        <th>Quantity</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    $total = 0;
-                    foreach ($items as $item): 
-                        $itemTotal = $item['price'] * $item['quantity'];
-                        $total += $itemTotal;
+        
+        <!-- Orders Container -->
+        <div class="orders-container">
+            <h2 class="section-title"><i class="fas fa-shopping-bag"></i> Order History</h2>
+            
+            <?php if ($orders_result && $orders_result->num_rows > 0): ?>
+                <?php while($order = $orders_result->fetch_assoc()): ?>
+                    <?php
+                        // Format date
+                        $order_date = date('F j, Y', strtotime($order['created_at']));
+                        
+                        // Determine status class
+                        $status_class = '';
+                        switch (strtolower($order['order_status'])) {
+                            case 'processing':
+                                $status_class = 'status-processing';
+                                break;
+                            case 'delivered':
+                                $status_class = 'status-delivered';
+                                break;
+                            case 'cancelled':
+                                $status_class = 'status-cancelled';
+                                break;
+                            case 'shipped':
+                                $status_class = 'status-shipped';
+                                break;
+                            case 'pending':
+                                $status_class = 'status-pending';
+                                break;
+                            default:
+                                $status_class = 'status-processing';
+                        }
                     ?>
-                    <tr>
-                        <td>
-                            <div class="product-info">
-                                <img src="<?php echo htmlspecialchars($item['image']); ?>" 
-                                     alt="<?php echo htmlspecialchars($item['product_name']); ?>" 
-                                     class="product-image">
-                                <span><?php echo htmlspecialchars($item['product_name']); ?></span>
+                    <div class="order-card">
+                        <div class="order-header">
+                            <div class="order-id">Order #<?php echo htmlspecialchars($order['order_id']); ?></div>
+                            <div class="order-date"><?php echo $order_date; ?></div>
+                            <div class="order-status <?php echo $status_class; ?>">
+                                <?php echo htmlspecialchars(ucfirst($order['order_status'])); ?>
                             </div>
-                        </td>
-                        <td>₹<?php echo number_format($item['price'], 2); ?></td>
-                        <td><?php echo htmlspecialchars($item['quantity']); ?></td>
-                        <td>₹<?php echo number_format($itemTotal, 2); ?></td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="total-section">
-            <div class="total-row">
-                <span>Subtotal</span>
-                <span>₹<?php echo number_format($total, 2); ?></span>
-            </div>
-            <div class="total-row">
-                <span>Shipping</span>
-                <span>₹0.00</span>
-            </div>
-            <div class="total-row">
-                <span>Total</span>
-                <span>₹<?php echo number_format($total, 2); ?></span>
-            </div>
-        </div>
-
-        <div class="action-buttons">
-            <a href="print_receipt.php?order_id=<?php echo urlencode($order_id); ?>" 
-               class="btn btn-primary" target="_blank">
-                <i class="fas fa-print"></i> Print Receipt
-            </a>
-            <a href="index.php" class="btn btn-secondary">
-                <i class="fas fa-home"></i> Continue Shopping
-            </a>
+                        </div>
+                        
+                        <div class="order-content">
+                            <div class="order-summary">
+                                <div class="order-details">
+                                    <div class="detail-row">
+                                        <div class="detail-label">Payment ID:</div>
+                                        <div class="detail-value"><?php echo htmlspecialchars($order['payment_id'] ?? 'Not specified'); ?></div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Payment Status:</div>
+                                        <div class="detail-value"><?php echo htmlspecialchars($order['payment_status'] ?? 'Not specified'); ?></div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Shipping Address:</div>
+                                        <div class="detail-value"><?php echo htmlspecialchars($order['shipping_address'] ?? 'Not specified'); ?></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="order-total">
+                                    ₹<?php echo number_format($order['total_amount'], 2); ?>
+                                </div>
+                            </div>
+                            
+                            <div class="order-actions">
+                                <?php if ($order['order_status'] == 'processing'): ?>
+                                    <a href="cancel_order.php?order_id=<?php echo urlencode($order['order_id']); ?>" class="action-btn cancel-btn" onclick="return confirm('Are you sure you want to cancel this order?');">
+                                        <i class="fas fa-times-circle"></i> Cancel Order
+                                    </a>
+                                <?php endif; ?>
+                                
+                                <?php if ($order['order_status'] == 'delivered'): ?>
+    <a href="write_review.php?order_id=<?php echo urlencode($order['order_id']); ?>" class="action-btn review-btn">
+        <i class="fas fa-star"></i> Write Review
+    </a>
+<?php endif; ?>
+                                
+                                <a href="view_details.php?order_id=<?php echo htmlspecialchars($order['order_id']); ?>" 
+                                   class="btn btn-primary">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <div class="empty-orders">
+                    <div class="empty-orders-icon">
+                        <i class="fas fa-shopping-bag"></i>
+                    </div>
+                    <div class="empty-orders-text">You haven't placed any orders yet.</div>
+                    <a href="index.php" class="shop-now-btn">Shop Now</a>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </body>

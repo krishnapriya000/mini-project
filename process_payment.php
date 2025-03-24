@@ -339,7 +339,7 @@ try {
         </div>
         
         <div class="button-group">
-            <a href="order_confirmation.php" class="btn-confirmation">
+            <a href="view_order_details.php" class="btn-confirmation">
                 <i class="fas fa-shopping-bag"></i> View Order Details
             </a>
             <a href="print_receipt.php?order_id=<?php echo urlencode($order_id); ?>" 
@@ -352,7 +352,7 @@ try {
     <script>
         // Optional: Redirect after a delay
         setTimeout(function() {
-            window.location.href = "order_confirmation.php";
+            window.location.href = "view_order_details.php";
         }, 5000);
     </script>
 </body>

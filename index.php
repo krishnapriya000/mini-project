@@ -443,7 +443,7 @@ session_start();
 
         <div class="profile-dropdown">
             <a href="profile.php"><i class="fas fa-user-circle"></i> Profile</a>
-            <a href="order_confirmation.php"><i class="fas fa-shopping-bag"></i> Orders</a>
+            <a href="view_orders.php"><i class="fas fa-shopping-bag"></i> Orders</a>
             <a href="favorites.php"><i class="fas fa-heart"></i> Favorites</a>
             <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>

@@ -72,7 +72,7 @@ $result = $stmt->get_result();
         }
         
         :root {
-            --primary-color: #6c5ce7;
+            --primary-color:rgb(231, 92, 175);
             --secondary-color: #a29bfe;
             --light-color: #f5f6fa;
             --dark-color: #2d3436;
@@ -416,7 +416,7 @@ $result = $stmt->get_result();
             <i class="fas fa-box-open"></i>
             <h3>No Products Found</h3>
             <p>You haven't added any products yet. Start selling by adding your first product.</p>
-            <a href="product_manage.php" class="btn btn-primary"><i class="fas fa-plus"></i> Add Your First Product</a>
+            <a href="product manage.php" class="btn btn-primary"><i class="fas fa-plus"></i> Add Your First Product</a>
         </div>
         <?php endif; ?>
     </div>

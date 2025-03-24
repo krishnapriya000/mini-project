@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 // Get user's orders
 $query = "SELECT o.*, 
           p.name as product_name, 
-          p.image_url, 
+          CONCAT('uploads/products/', p.image_url) as image_url,
           p.price, 
           ci.quantity
           FROM orders_table o
@@ -25,6 +25,13 @@ try {
     $stmt->bind_param("i", $_SESSION['user_id']);
     $stmt->execute();
     $result = $stmt->get_result();
+    
+    // Add this debug code temporarily
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        var_dump($row['image_url']); // Let's see what we get now
+        $result->data_seek(0); // Reset the result pointer
+    }
 } catch (Exception $e) {
     echo "Error: " . $e->getMessage();
     exit();
@@ -218,7 +225,7 @@ try {
                 if ($row['product_name']): // Only show if product exists
             ?>
                     <div class="product-item">
-                        <img src="uploads/<?php echo htmlspecialchars($row['image_url']); ?>" 
+                        <img src="<?php echo htmlspecialchars($row['image_url']); ?>" 
                              alt="<?php echo htmlspecialchars($row['product_name']); ?>"
                              class="product-image"
                              onerror="this.src='placeholder.jpg'">

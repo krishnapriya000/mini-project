@@ -11,20 +11,37 @@ if (empty($search_query)) {
     exit();
 }
 
+// Pagination
+$results_per_page = 12; // Number of results per page
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1; // Current page
+$offset = ($page - 1) * $results_per_page; // Offset for SQL query
+
 // Prepare the search query
 $query = "SELECT * FROM product_table 
           WHERE name LIKE ? 
           OR description LIKE ?
-          OR brand LIKE ?";
+          OR brand LIKE ?
+          LIMIT ? OFFSET ?";
 
 try {
     $stmt = $conn->prepare($query);
     $search_term = "%{$search_query}%";
-    $stmt->bind_param("sss", $search_term, $search_term, $search_term);
+    $stmt->bind_param("sssii", $search_term, $search_term, $search_term, $results_per_page, $offset);
     $stmt->execute();
     $result = $stmt->get_result();
+
+    // Get total number of results for pagination
+    $total_results_query = "SELECT COUNT(*) AS total FROM product_table 
+                            WHERE name LIKE ? 
+                            OR description LIKE ?
+                            OR brand LIKE ?";
+    $stmt_total = $conn->prepare($total_results_query);
+    $stmt_total->bind_param("sss", $search_term, $search_term, $search_term);
+    $stmt_total->execute();
+    $total_results = $stmt_total->get_result()->fetch_assoc()['total'];
+    $total_pages = ceil($total_results / $results_per_page);
 } catch (Exception $e) {
-    echo "Error: " . $e->getMessage();
+    echo "<div class='error-message'>Error: " . $e->getMessage() . "</div>";
     exit();
 }
 ?>
@@ -35,6 +52,8 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Search Results - BabyCubs</title>
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" as="style">
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
         body {
@@ -81,8 +100,26 @@ try {
         .search-box {
             padding: 8px 15px;
             border: 1px solid #ddd;
-            border-radius: 20px;
+            border-radius: 20px 0 0 20px;
             width: 200px;
+            height: 20px;
+        }
+
+        .search-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 0 20px 20px 0;
+            padding: 8px 15px;
+            cursor: pointer;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-button:hover {
+            background-color: #0056b3;
         }
 
         /* Container Styles */
@@ -182,6 +219,31 @@ try {
             margin-bottom: 20px;
         }
 
+        /* Pagination Styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .pagination a {
+            padding: 8px 16px;
+            margin: 0 5px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .pagination a:hover {
+            background-color: #0056b3;
+        }
+
+        .pagination a.active {
+            background-color: #0056b3;
+        }
+
         /* Profile Icon Styles */
         .profile-icon-container {
             position: relative;
@@ -224,6 +286,40 @@ try {
         .profile-dropdown a:hover {
             background-color: #ddd;
         }
+
+        .search-form {
+            display: flex;
+            align-items: center;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .navbar-brand {
+                font-size: 2rem;
+            }
+
+            .search-box {
+                width: 150px;
+            }
+
+            .search-results {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar-brand {
+                font-size: 1.5rem;
+            }
+
+            .search-box {
+                width: 120px;
+            }
+
+            .search-results {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
     </style>
 </head>
 <body>
@@ -232,14 +328,14 @@ try {
         <div class="navbar-content">
             <a href="index.php" class="navbar-brand">BabyCubs</a>
             <div class="search-cart">
-                <form action="search.php" method="GET" style="display: flex; align-items: center;">
+                <form action="search.php" method="GET" class="search-form">
                     <input type="search" name="query" placeholder="Search products..." 
                            class="search-box" value="<?php echo htmlspecialchars($search_query); ?>">
-                    <button type="submit" style="border: none; background: none; cursor: pointer; padding: 8px;">
+                    <button type="submit" class="search-button">
                         <i class="fas fa-search"></i>
                     </button>
                 </form>
-                <a href="cart.php" style="text-decoration: none; color: #333;">
+                <a href="cart.php" style="text-decoration: none; color: #333; font-size: 1.2rem; margin-left: 10px;">
                     <i class="fas fa-shopping-cart"></i>
                 </a>
                 <div class="profile-icon-container">
@@ -275,13 +371,6 @@ try {
         
         <?php if ($result && $result->num_rows > 0): ?>
             <div class="search-results">
-                <?php
-                    if ($result && $result->num_rows > 0) {
-                        $first_product = $result->fetch_assoc();
-                        $result->data_seek(0); // Reset the pointer
-                        echo "<!-- Debug: Image path = ../baby/seller/" . htmlspecialchars($first_product['image_url']) . " -->";
-                    }
-                ?>
                 <?php while ($product = $result->fetch_assoc()): ?>
                     <div class="product-card">
                         <img src="seller/<?php echo htmlspecialchars($product['image_url']); ?>" 
@@ -301,6 +390,24 @@ try {
                         </div>
                     </div>
                 <?php endwhile; ?>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                <?php if ($page > 1): ?>
+                    <a href="search.php?query=<?php echo urlencode($search_query); ?>&page=<?php echo $page - 1; ?>">Previous</a>
+                <?php endif; ?>
+
+                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                    <a href="search.php?query=<?php echo urlencode($search_query); ?>&page=<?php echo $i; ?>" 
+                       class="<?php echo $i == $page ? 'active' : ''; ?>">
+                        <?php echo $i; ?>
+                    </a>
+                <?php endfor; ?>
+
+                <?php if ($page < $total_pages): ?>
+                    <a href="search.php?query=<?php echo urlencode($search_query); ?>&page=<?php echo $page + 1; ?>">Next</a>
+                <?php endif; ?>
             </div>
         <?php else: ?>
             <div class="no-results">
