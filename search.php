@@ -56,82 +56,190 @@ try {
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: rgb(255, 234, 249);
-            line-height: 1.6;
+        /* Base Styles */
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', Arial, sans-serif;
         }
 
-        /* Navbar Styles */
-        .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            position: fixed;
-            width: 100%;
-            top: 0;
-            z-index: 1000;
-            padding: 1rem 0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        body {
+            background: linear-gradient(to bottom, #f8f9fa, #e6ebfa);
+            min-height: 100vh;
         }
 
-        .navbar-content {
+        /* Enhanced Header */
+        .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
+            padding: 20px 40px;
+            background: white;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
-        .navbar-brand {
-            font-weight: bold;
-            font-size: 2.5rem;
-            text-decoration: none;
-            color: blue;
+        .logo {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(45deg, #0077cc, #1a8cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: transform 0.3s ease;
         }
 
-        .search-cart {
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        /* Search Container Improvements */
+        .search-container {
+            flex-grow: 1;
+            max-width: 600px;
+            margin: 0 40px;
+        }
+
+        .search-container form {
             display: flex;
-            align-items: center;
-            gap: 15px;
+            position: relative;
+            width: 100%;
         }
 
-        .search-box {
-            padding: 10px 20px;
-            border: 2px solid #ddd;
-            border-radius: 25px 0 0 25px;
-            width: 200px;
-            height: 20px;
+        .search-container input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 30px;
+            font-size: 15px;
             transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
 
-        .search-box:focus {
-            border-color: #007bff;
-            box-shadow: 0 0 10px rgba(0,123,255,0.2);
-            outline: none;
+        .search-container input:focus {
+            border-color: #0077cc;
+            box-shadow: 0 0 15px rgba(0,119,204,0.1);
         }
 
-        .search-button {
-            background: linear-gradient(45deg, #007bff, #00bfff);
+        .search-btn {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            padding: 0 25px;
+            background: linear-gradient(45deg, #0077cc, #1a8cff);
             color: white;
             border: none;
-            border-radius: 0 25px 25px 0;
-            padding: 12px 20px;
+            border-radius: 0 30px 30px 0;
             cursor: pointer;
-            height: 42px;
+            font-weight: 500;
             transition: all 0.3s ease;
         }
 
-        .search-button:hover {
-            background: linear-gradient(45deg, #0056b3, #0098ff);
-            transform: translateX(2px);
+        .search-btn:hover {
+            background: linear-gradient(45deg, #005fa3, #0066cc);
+        }
+
+        /* Navigation Links Enhancement */
+        .nav-links {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 22px;
+            color: #2c3e50;
+            padding: 10px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .icon-btn:hover {
+            color: #0077cc;
+            background-color: rgba(0,119,204,0.1);
+            transform: translateY(-2px);
+        }
+
+        .user-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, #6c5ce7, #8e44ad);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(108,92,231,0.3);
+        }
+
+        .user-icon:hover {
+            transform: scale(1.1);
+        }
+
+        /* Category Navigation Enhancement */
+        .category-nav {
+            display: flex;
+            justify-content: center;
+            background: white;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 30px;
+        }
+
+        .category-nav::-webkit-scrollbar {
+            height: 3px;
+        }
+
+        .category-nav::-webkit-scrollbar-thumb {
+            background: #0077cc;
+            border-radius: 10px;
+        }
+
+        .category-nav button {
+            padding: 10px 25px;
+            margin: 0 8px;
+            background-color: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #2c3e50;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .category-nav button:hover {
+            border-color: #0077cc;
+            color: #0077cc;
+            transform: translateY(-2px);
+        }
+
+        .category-nav button.active {
+            background: linear-gradient(45deg, #0077cc, #1a8cff);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,119,204,0.3);
         }
 
         /* Container Styles */
         .container {
             max-width: 1200px;
-            margin: 100px auto 20px;
+            margin: 20px auto 20px;
             padding: 20px;
         }
 
@@ -146,125 +254,180 @@ try {
             margin-bottom: 10px;
         }
 
+        /* Updated Product Card Styles */
         .search-results {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 25px;
-            padding: 20px 0;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px;
+            padding: 40px;
+            margin: 0 auto;
+            max-width: 1400px;
         }
 
         .product-card {
             background: white;
             border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
             display: flex;
             flex-direction: column;
-            height: 100%;
-            position: relative;
         }
 
         .product-card:hover {
             transform: translateY(-10px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
         }
 
         .product-image {
-            width: 100%;
-            height: 200px;
+            position: relative;
+            height: 250px;
+            background: #f8f9fa;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .product-image img {
+            max-width: 100%;
+            max-height: 220px;
             object-fit: contain;
-            background-color: #f8f8f8;
-            padding: 10px;
-            box-sizing: border-box;
             transition: transform 0.3s ease;
         }
 
-        .product-card:hover .product-image {
+        .product-card:hover .product-image img {
             transform: scale(1.05);
         }
 
-        .product-details {
-            padding: 15px;
+        .product-info {
+            padding: 20px;
+            background: white;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
+            justify-content: space-between;
         }
 
-        .product-name {
-            font-size: 1.1em;
-            margin: 0 0 10px 0;
-            color: #333;
+        .product-title {
+            font-weight: 600;
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            line-height: 1.4;
+            height: 45px;
             overflow: hidden;
-            text-overflow: ellipsis;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
-            line-height: 1.3;
-            height: 2.6em;
+            text-align: center;
         }
 
         .product-price {
-            font-weight: bold;
-            color: #007bff;
-            font-size: 1.3em;
-            margin: 10px 0;
-            transition: color 0.3s ease;
-        }
-
-        .product-card:hover .product-price {
-            color: #0056b3;
-        }
-
-        .product-description {
-            color: #666;
-            font-size: 0.9em;
+            color: #e74c3c;
+            font-weight: 700;
+            font-size: 20px;
             margin-bottom: 15px;
-            flex-grow: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background: linear-gradient(45deg, #007bff, #00bfff);
+        .discount {
+            color: #27ae60;
+            font-size: 14px;
+            font-weight: 600;
+            background-color: #e8f5e9;
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+
+        .like-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            border: 2px solid #ff69b4;
+            color: #ff69b4;
+            padding: 8px;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 2;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .like-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .like-btn.active {
+            background: #ff69b4;
             color: white;
-            text-decoration: none;
-            border-radius: 25px;
+        }
+
+        .product-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .action-button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
             transition: all 0.3s ease;
             text-align: center;
-            width: 100%;
-            box-sizing: border-box;
-            position: relative;
-            overflow: hidden;
         }
 
-        .btn:hover {
-            background: linear-gradient(45deg, #0056b3, #0098ff);
+        .add-to-cart {
+            background: linear-gradient(45deg, #0077cc, #1a8cff);
+            color: white;
+        }
+
+        .buy-now {
+            background: linear-gradient(45deg, #00b894, #00a382);
+            color: white;
+        }
+
+        .action-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,123,255,0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
-        .btn:active {
-            transform: translateY(0);
-        }
-
+        /* No Products Message Enhancement */
         .no-results {
             text-align: center;
-            padding: 40px;
+            padding: 60px 40px;
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            width: 100%;
+            max-width: 800px;
+            margin: 40px auto;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+
+        .no-results h3 {
+            font-size: 24px;
+            color: #2c3e50;
+            margin-bottom: 15px;
         }
 
         .no-results p {
-            font-size: 1.2em;
             color: #666;
-            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.6;
         }
 
         /* Pagination Styles */
@@ -297,123 +460,114 @@ try {
             box-shadow: 0 5px 15px rgba(0,123,255,0.3);
         }
 
-        /* Profile Icon Styles */
-        .profile-icon-container {
-            position: relative;
-            display: inline-block;
-        }
-
-        .profile-icon {
-            font-size: 1.2rem;
-            color: #333;
-            background-color: #f1f1f1;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        .profile-dropdown {
-            display: none;
-            position: absolute;
-            background-color: #f1f1f1;
-            min-width: 160px;
-            box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
-            z-index: 1;
-            right: 0;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        .profile-dropdown a {
-            color: #333;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            transition: background-color 0.3s;
-        }
-
-        .profile-dropdown a:hover {
-            background-color: #ddd;
-        }
-
-        .search-form {
-            display: flex;
-            align-items: center;
-        }
-
-        /* Responsive Styles */
-        @media (max-width: 768px) {
-            .navbar-brand {
-                font-size: 2rem;
-            }
-
-            .search-box {
-                width: 150px;
-            }
-
+        /* Responsive Design */
+        @media (max-width: 1024px) {
             .search-results {
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                padding: 20px;
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 15px 20px;
+            }
+
+            .search-container {
+                margin: 0 15px;
+            }
+
+            .search-header h1 {
+                font-size: 24px;
+            }
+
+            .product-card {
+                width: 100%;
             }
         }
 
         @media (max-width: 480px) {
-            .navbar-brand {
-                font-size: 1.5rem;
+            .logo {
+                font-size: 24px;
             }
 
-            .search-box {
-                width: 120px;
+            .nav-links {
+                gap: 15px;
             }
 
-            .search-results {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            .user-icon {
+                width: 35px;
+                height: 35px;
+            }
+
+            .category-nav button {
+                padding: 8px 15px;
+                font-size: 14px;
             }
         }
     </style>
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar">
-        <div class="navbar-content">
-            <a href="index.php" class="navbar-brand">BabyCubs</a>
-            <div class="search-cart">
-                <form action="search.php" method="GET" class="search-form">
-                    <input type="search" name="query" placeholder="Search products..." 
-                           class="search-box" value="<?php echo htmlspecialchars($search_query); ?>">
-                    <button type="submit" class="search-button">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </form>
-                <a href="cart.php" style="text-decoration: none; color: #333; font-size: 1.2rem; margin-left: 10px;">
-                    <i class="fas fa-shopping-cart"></i>
-                </a>
-                <div class="profile-icon-container">
-                    <?php if(isset($_SESSION['user_id'])): ?>
-                        <div class="profile-icon">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="profile-dropdown">
-                            <a href="profile.php"><i class="fas fa-user-circle"></i> Profile</a>
-                            <a href="my_orders.php"><i class="fas fa-shopping-bag"></i> Orders</a>
-                            <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
-                        </div>
-                    <?php else: ?>
-                        <div class="profile-icon">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="profile-dropdown">
-                            <a href="login.php">Login</a>
-                            <a href="signup.php">Sign Up</a>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
+    <div class="header">
+        <a href="index.php" style="text-decoration: none;">
+            <div class="logo">BabyCubs</div>
+        </a>
+        
+        <div class="search-container">
+            <form action="search.php" method="GET">
+                <input type="text" name="query" placeholder="Search products" 
+                       value="<?php echo htmlspecialchars($search_query); ?>" required>
+                <button type="submit" class="search-btn">Search</button>
+            </form>
         </div>
-    </nav>
+        
+        <div class="nav-links">
+            <a href="index.php" style="text-decoration: none;">
+                <button class="icon-btn" title="Home">
+                    <i class="fas fa-home"></i>
+                </button>
+            </a>
+            <a href="profile.php" style="text-decoration: none;">
+                <div class="user-icon" title="Profile">
+                    <?php 
+                    if(isset($_SESSION['username'])) {
+                        echo substr($_SESSION['username'], 0, 1);
+                    } else {
+                        echo "P"; 
+                    }
+                    ?>
+                </div>
+            </a>
+            <a href="cart.php" style="text-decoration: none;">
+                <button class="icon-btn" title="Cart">
+                    <i class="fas fa-shopping-cart"></i>
+                </button>
+            </a>
+            <a href="logout.php" style="text-decoration: none;">
+                <button class="icon-btn" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </a>
+        </div>
+    </div>
+
+    <!-- Category Navigation -->
+    <div class="category-nav">
+        <?php
+        // Fetch categories for the navigation
+        $cat_query = "SELECT * FROM categories_table ORDER BY name";
+        $cat_result = $conn->query($cat_query);
+        
+        if ($cat_result && $cat_result->num_rows > 0) {
+            while ($cat_row = $cat_result->fetch_assoc()) {
+                echo '<a href="category.php?id='.$cat_row['category_id'].'" style="text-decoration: none;">';
+                echo '<button>'.htmlspecialchars($cat_row['name']).'</button>';
+                echo '</a>';
+            }
+        }
+        ?>
+    </div>
 
     <!-- Main Content -->
     <div class="container">
@@ -424,22 +578,44 @@ try {
         
         <?php if ($result && $result->num_rows > 0): ?>
             <div class="search-results">
-                <?php while ($product = $result->fetch_assoc()): ?>
+                <?php while ($product = $result->fetch_assoc()): 
+                    // Calculate discount percentage (you can replace this with your actual discount logic)
+                    $discount_percentage = rand(10, 60);
+                ?>
                     <div class="product-card">
-                        <img src="<?php echo htmlspecialchars($product['image_url']); ?>" 
-                             alt="<?php echo htmlspecialchars($product['name']); ?>"
-                             class="product-image"
-                             onerror="this.src='assets/images/placeholder.jpg'">
-                        <div class="product-details">
-                            <h3 class="product-name"><?php echo htmlspecialchars($product['name']); ?></h3>
-                            <p class="product-description">
-                                <?php 
-                                    $desc = htmlspecialchars($product['description']);
-                                    echo strlen($desc) > 100 ? substr($desc, 0, 97) . '...' : $desc;
-                                ?>
-                            </p>
-                            <p class="product-price">₹<?php echo number_format($product['price'], 2); ?></p>
-                            <a href="product_details.php?id=<?php echo $product['product_id']; ?>" class="btn">View Details</a>
+                        <div class="product-image">
+                        <button class="like-btn <?php echo $isLiked ? 'active' : ''; ?>" 
+        onclick="toggleLike(this, <?php echo $product['product_id']; ?>)">
+    <i class="fas fa-heart"></i>
+</button>
+                            <a href="product_details.php?id=<?php echo $product['product_id']; ?>">
+                                <img src="<?php echo htmlspecialchars($product['image_url']); ?>" 
+                                     alt="<?php echo htmlspecialchars($product['name']); ?>"
+                                     onerror="this.src='assets/images/placeholder.jpg'">
+                            </a>
+                        </div>
+                        <div class="product-info">
+                            <div class="product-title"><?php echo htmlspecialchars($product['name']); ?></div>
+                            <div class="product-price">
+                                ₹<?php echo number_format($product['price'], 2); ?>
+                                <span class="discount">(<?php echo $discount_percentage; ?>% off)</span>
+                            </div>
+                            <div class="product-buttons">
+                                <form action="cart.php" method="POST" style="flex: 1;">
+                                    <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="action-button add-to-cart">
+                                        <i class="fas fa-shopping-cart"></i> Add to Cart
+                                    </button>
+                                </form>
+                                <form action="buy_now.php" method="POST" style="flex: 1;">
+                                    <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="action-button buy-now">
+                                        <i class="fas fa-bolt"></i> Buy Now
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 <?php endwhile; ?>
@@ -464,31 +640,39 @@ try {
             </div>
         <?php else: ?>
             <div class="no-results">
-                <p>No products found matching your search.</p>
-                <a href="index.php" class="btn">Return to Home</a>
+                <h3>No products found matching your search</h3>
+                <p>We couldn't find any products matching "<?php echo htmlspecialchars($search_query); ?>". Please try a different search term!</p>
+                <a href="index.php" class="action-button add-to-cart" style="display: inline-block; width: auto; padding: 10px 30px; margin-top: 20px;">
+                    Return to Home
+                </a>
             </div>
         <?php endif; ?>
     </div>
 
     <script>
-        // Profile dropdown functionality
-        document.addEventListener("DOMContentLoaded", function() {
-            const profileIcon = document.querySelector(".profile-icon");
-            const profileDropdown = document.querySelector(".profile-dropdown");
-
-            profileIcon.addEventListener("click", function(event) {
-                event.stopPropagation();
-                profileDropdown.style.display = profileDropdown.style.display === "block" ? "none" : "block";
-            });
-
-            document.addEventListener("click", function() {
-                profileDropdown.style.display = "none";
-            });
-
-            profileDropdown.addEventListener("click", function(event) {
-                event.stopPropagation();
-            });
-        });
+    function toggleLike(button, productId) {
+    button.classList.toggle('active');
+    
+    // Send AJAX request to update favorites
+    fetch('update_favorites.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'product_id=' + productId + '&action=' + (button.classList.contains('active') ? 'add' : 'remove')
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error('Error:', data.error);
+            button.classList.toggle('active'); // Revert if error
+        }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+        button.classList.toggle('active'); // Revert if error
+    });
+}
     </script>
 </body>
 </html>

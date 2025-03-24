@@ -72,42 +72,38 @@ $result = $stmt->get_result();
         }
         
         :root {
-            --primary-color:rgb(231, 92, 175);
-            --secondary-color: #a29bfe;
-            --light-color: #f5f6fa;
-            --dark-color: #2d3436;
+            --primary-color: #ff69b4;    /* Updated to match pink theme */
+            --secondary-color: #f8bbd0;   /* Light pink */
+            --text-color: #333;
+            --sidebar-width: 260px;
             --success-color: #00b894;
-            --warning-color: #fdcb6e;
             --danger-color: #d63031;
         }
         
         body {
-            display: flex;
-            background-color: #f0f2f5;
+            background-color: #f5f5f5;
         }
         
+        /* Updated Sidebar Styles */
         .sidebar {
-            width: 260px;
+            width: var(--sidebar-width);
             height: 100vh;
-            background-color: var(--primary-color);
-            color: white;
+            background-color: white;      /* Changed to white */
             position: fixed;
             padding: 20px 0;
-            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
         }
         
         .sidebar-header {
             padding: 0 20px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid #eee;
             margin-bottom: 20px;
         }
         
         .sidebar-header h1 {
+            color: var(--primary-color);  /* Changed to pink */
             font-size: 24px;
             font-weight: bold;
-            display: flex;
-            align-items: center;
         }
         
         .sidebar-header h1 i {
@@ -124,7 +120,7 @@ $result = $stmt->get_result();
         }
         
         .sidebar-menu a {
-            color: white;
+            color: var(--text-color);     /* Changed to dark text */
             text-decoration: none;
             display: flex;
             align-items: center;
@@ -132,14 +128,11 @@ $result = $stmt->get_result();
             transition: all 0.3s ease;
         }
         
-        .sidebar-menu a:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            padding-left: 25px;
-        }
-        
+        .sidebar-menu a:hover,
         .sidebar-menu a.active {
             background-color: var(--secondary-color);
-            border-left: 4px solid white;
+            color: var(--primary-color);
+            border-left: 4px solid var(--primary-color);
         }
         
         .sidebar-menu i {
@@ -182,13 +175,14 @@ $result = $stmt->get_result();
             display: inline-block;
         }
         
+        /* Updated Button Styles */
         .btn-primary {
             background-color: var(--primary-color);
             color: white;
         }
         
         .btn-primary:hover {
-            background-color: #5649c0;
+            background-color: #ff4da6;    /* Darker pink */
         }
         
         .btn-success {
@@ -221,11 +215,13 @@ $result = $stmt->get_result();
             overflow: hidden;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #eee;
         }
         
         .product-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-color: var(--secondary-color);
         }
         
         .product-image {
@@ -342,6 +338,7 @@ $result = $stmt->get_result();
             padding: 20px;
             max-width: 400px;
             text-align: center;
+            border: 1px solid var(--secondary-color);
         }
         
         .delete-confirm-box h3 {

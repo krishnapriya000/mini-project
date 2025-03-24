@@ -45,6 +45,21 @@ $stmt->bind_param("i", $category_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $stmt->close();
+
+// Prepare to check which products are favorited by the user
+$favorited_products = [];
+if (isset($_SESSION['user_id'])) {
+    $favorites_query = "SELECT product_id FROM user_favorites WHERE user_id = ?";
+    $stmt = $conn->prepare($favorites_query);
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $favorites_result = $stmt->get_result();
+    
+    while ($row = $favorites_result->fetch_assoc()) {
+        $favorited_products[] = $row['product_id'];
+    }
+    $stmt->close();
+}
 ?>
 
 <!DOCTYPE html>
@@ -287,6 +302,7 @@ $stmt->close();
         }
 
         .product-image {
+            position: relative;
             height: 250px;
             background: #f8f9fa;
             padding: 20px;
@@ -317,18 +333,18 @@ $stmt->close();
         }
 
         .product-title {
-    font-weight: 600;
-    font-size: 16px;
-    color: #2c3e50;
-    margin-bottom: 15px;
-    line-height: 1.4;
-    height: 45px;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    text-align: center; /* Add this line */
-}
+            font-weight: 600;
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            line-height: 1.4;
+            height: 45px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            text-align: center;
+        }
 
         .product-price {
             color: #e74c3c;
@@ -350,26 +366,66 @@ $stmt->close();
             border-radius: 12px;
         }
 
-        .add-to-cart {
-    background: linear-gradient(45deg, #0077cc, #1a8cff);
-    color: white;
-    border: none;
-    padding: 12px 25px;
-    border-radius: 25px;
-    cursor: pointer;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    transition: all 0.3s ease;
-    display: block;           /* Add this line */
-    margin: 0 auto;           /* Add this line */
-    text-align: center;       /* Add this line */
-}
+        .like-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            border: 2px solid #ff69b4;
+            color: #ff69b4;
+            padding: 8px;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 2;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
 
-        .add-to-cart:hover {
-            background: linear-gradient(45deg, #005fa3, #0066cc);
+        .like-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .like-btn.active {
+            background: #ff69b4;
+            color: white;
+        }
+
+        .product-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .action-button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .add-to-cart {
+            background: linear-gradient(45deg, #0077cc, #1a8cff);
+            color: white;
+        }
+
+        .buy-now {
+            background: linear-gradient(45deg, #00b894, #00a382);
+            color: white;
+        }
+
+        .action-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,119,204,0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
         /* No Products Message Enhancement */
@@ -444,7 +500,7 @@ $stmt->close();
     </style>
 </head>
 <body>
-    <div class="header">
+<div class="header">
         <a href="index.php" style="text-decoration: none;">
             <div class="logo">BabyCubs</div>
         </a>
@@ -462,10 +518,14 @@ $stmt->close();
                     <i class="fas fa-home"></i>
                 </button>
             </a>
+            <a href="favorites.php" style="text-decoration: none;">
+                <button class="icon-btn" title="Favorites">
+                    <i class="fas fa-heart"></i>
+                </button>
+            </a>
             <a href="profile.php" style="text-decoration: none;">
                 <div class="user-icon" title="Profile">
                     <?php 
-                    // Get first letter of username if logged in
                     if(isset($_SESSION['username'])) {
                         echo substr($_SESSION['username'], 0, 1);
                     } else {
@@ -495,7 +555,6 @@ $stmt->close();
         
         if ($cat_result && $cat_result->num_rows > 0) {
             while ($cat_row = $cat_result->fetch_assoc()) {
-                // Add 'active' class to the currently selected category
                 $active_class = ($cat_row['category_id'] == $category_id) ? 'active' : '';
                 
                 echo '<a href="category.php?id='.$cat_row['category_id'].'" style="text-decoration: none;">';
@@ -512,18 +571,16 @@ $stmt->close();
         <?php 
         if ($result && $result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) { 
-                // Calculate discount percentage if needed
-                $discount_percentage = 0;
-                $original_price = $row['price'];
-                
-                // You can implement your own discount logic here
-                // For now, we'll use a random discount between 10-60%
                 $discount_percentage = rand(10, 60);
-                $discounted_price = $original_price; // Set your actual discounted price calculation
+                $is_favorited = in_array($row['product_id'], $favorited_products);
                 ?>
                 
                 <div class="product-card">
                     <div class="product-image">
+                        <button class="like-btn <?php echo $is_favorited ? 'active' : ''; ?>" 
+                                onclick="toggleLike(this, <?php echo $row['product_id']; ?>)">
+                            <i class="fas fa-heart"></i>
+                        </button>
                         <a href="product_details.php?id=<?php echo $row['product_id']; ?>">
                             <?php if (!empty($row['image_url'])): ?>
                                 <img src="<?php echo htmlspecialchars($row['image_url']); ?>" 
@@ -539,11 +596,22 @@ $stmt->close();
                             ₹<?php echo number_format($row['price'], 2); ?>
                             <span class="discount">(<?php echo $discount_percentage; ?>% off)</span>
                         </div>
-                        <form action="cart.php" method="POST">
-                            <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
-                            <input type="hidden" name="quantity" value="1">
-                            <button type="submit" class="add-to-cart">Add to Cart</button>
-                        </form>
+                        <div class="product-buttons">
+                            <form action="cart.php" method="POST" style="flex: 1;">
+                                <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="action-button add-to-cart">
+                                    <i class="fas fa-shopping-cart"></i> Add to Cart
+                                </button>
+                            </form>
+                            <form action="cart.php" method="POST" style="flex: 1;">
+                                <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="action-button buy-now">
+                                    <i class="fas fa-bolt"></i> Buy Now
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
                 
@@ -561,8 +629,42 @@ $stmt->close();
     </div>
     
     <?php
-    // Close the connection
     $conn->close();
     ?>
+
+<script>
+function toggleLike(button, productId) {
+    const isActive = button.classList.contains('active');
+    
+    // Show loading state
+    button.disabled = true;
+    const icon = button.querySelector('i');
+    icon.className = 'fas fa-spinner fa-spin';
+    
+    fetch('update_favorites.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `product_id=${productId}&action=${isActive ? 'remove' : 'add'}`
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network error');
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) throw new Error(data.error);
+        button.classList.toggle('active');
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error: ' + error.message);
+    })
+    .finally(() => {
+        button.disabled = false;
+        icon.className = 'fas fa-heart';
+    });
+}
+</script>
 </body>
 </html>

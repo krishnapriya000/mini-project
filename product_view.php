@@ -234,12 +234,13 @@ try {
         }
         
         .product-image {
+            position: relative;  /* Added for absolute positioning of like button */
             height: 250px;
             background-color: #f8f9fa;
             padding: 20px;
             display: flex;
             align-items: center;
-            justify-content: center; /* Center product images */
+            justify-content: center;
             overflow: hidden;
         }
         
@@ -299,25 +300,75 @@ try {
             display: inline-block; /* Keep the discount inline */
         }
         
+        .like-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            border: 2px solid #ff69b4;
+            color: #ff69b4;
+            padding: 8px;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 2;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .like-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .like-btn.active {
+            background: #ff69b4;
+            color: white;
+        }
+        
+        .product-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        
+        .cart-buy-buttons {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+        
+        .action-button {
+            flex: 1;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
         .add-to-cart {
             background: linear-gradient(135deg, #0077cc, #005fa3);
             color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-            margin: 0 auto; /* Center the button */
-            display: block; /* Make block to allow margin auto */
         }
         
-        .add-to-cart:hover {
-            background: linear-gradient(135deg, #005fa3, #004c82);
+        .buy-now {
+            background: linear-gradient(135deg, #00b894, #00a382);
+            color: white;
+        }
+        
+        .action-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,119,204,0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         
         .no-products {
@@ -491,6 +542,9 @@ try {
                 
                 <div class="product-card">
                     <div class="product-image">
+                        <button class="like-btn" onclick="toggleLike(this, <?php echo $row['product_id']; ?>)">
+                            <i class="fas fa-heart"></i>
+                        </button>
                         <a href="product_details.php?id=<?php echo $row['product_id']; ?>">
                             <?php if (!empty($row['image_url'])): ?>
                                 <img src="<?php echo htmlspecialchars($row['image_url']); ?>" 
@@ -510,11 +564,24 @@ try {
                             ₹<?php echo number_format($row['price'], 2); ?>
                             <span class="discount">(<?php echo $discount_percentage; ?>% off)</span>
                         </div>
-                        <form action="cart.php" method="POST">
-                            <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
-                            <input type="hidden" name="quantity" value="1">
-                            <button type="submit" class="add-to-cart">Add to Cart</button>
-                        </form>
+                        <div class="product-buttons">
+                            <div class="cart-buy-buttons">
+                                <form action="cart.php" method="POST" style="flex: 1;">
+                                    <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="action-button add-to-cart">
+                                        <i class="fas fa-shopping-cart"></i> Add to Cart
+                                    </button>
+                                </form>
+                                <form action="buy_now.php" method="POST" style="flex: 1;">
+                                    <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="action-button buy-now">
+                                        <i class="fas fa-bolt"></i> Buy Now
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 

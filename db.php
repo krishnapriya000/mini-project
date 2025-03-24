@@ -480,6 +480,30 @@ if ($result->num_rows == 0) {
     }
 }
 
+
+// Add this code to your db.php file, preferably near other user-related tables
+
+// Create user_favorites table
+$favorites_table = "CREATE TABLE IF NOT EXISTS user_favorites (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    product_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user_table(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES product_table(product_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_product (user_id, product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+if (!$conn->query($favorites_table)) {
+    echo "Error creating favorites table: " . $conn->error . "<br>";
+}
+
+// Add index for better performance on user_id
+$add_favorites_index = "CREATE INDEX IF NOT EXISTS idx_user_favorites_user ON user_favorites(user_id)";
+if (!$conn->query($add_favorites_index)) {
+    echo "Error creating favorites index: " . $conn->error . "<br>";
+}
+
 // Close the connection
 //$conn->close();
 ?>

@@ -205,7 +205,202 @@ $conn->close();
     <title>Add Product - BabyCubs Seller Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Your existing CSS styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        :root {
+            --primary-color: #ff69b4;
+            --secondary-color: #f8bbd0;
+            --text-color: #333;
+            --sidebar-width: 250px;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+        }
+        
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background-color: white;
+            position: fixed;
+            padding: 20px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+        
+        .sidebar-header h1 {
+            color: var(--primary-color);
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-menu li {
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-menu a {
+            color: var(--text-color);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .sidebar-menu i {
+            margin-right: 12px;
+            font-size: 18px;
+            width: 25px;
+            text-align: center;
+        }
+        
+        .content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 20px;
+        }
+        
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background-color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .content-header h2 {
+            font-size: 24px;
+            color: var(--dark-color);
+        }
+        
+        .add-product-form {
+            background-color: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            flex: 1;
+            min-width: 250px;
+            margin: 0 10px 15px 0;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--dark-color);
+            font-weight: 500;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .form-group textarea {
+            height: 120px;
+            resize: vertical;
+        }
+        
+        .form-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #5649c0;
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid #ddd;
+            color: var(--dark-color);
+            margin-right: 10px;
+        }
+        
+        .btn-outline:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .image-previews {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.image-preview {
+    flex: 1;
+    height: 150px;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f9f9f9;
+    overflow: hidden;
+}
+
+.image-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    display: none;
+}
+        
+        .image-preview span {
+            color: #999;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -229,47 +424,35 @@ $conn->close();
         }
         
         :root {
-            --primary-color: #6c5ce7;
-            --secondary-color: #a29bfe;
-            --light-color: #f5f6fa;
-            --dark-color: #2d3436;
-            --success-color: #00b894;
-            --warning-color: #fdcb6e;
-            --danger-color: #d63031;
+            --primary-color: #ff69b4;
+            --secondary-color: #f8bbd0;
+            --text-color: #333;
+            --sidebar-width: 250px;
         }
         
         body {
-            display: flex;
-            background-color: #f0f2f5;
+            background-color: #f5f5f5;
         }
         
         .sidebar {
-            width: 260px;
+            width: var(--sidebar-width);
             height: 100vh;
-            background-color: var(--primary-color);
-            color: white;
+            background-color: white;
             position: fixed;
             padding: 20px 0;
-            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
         }
         
         .sidebar-header {
             padding: 0 20px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid #eee;
             margin-bottom: 20px;
         }
         
         .sidebar-header h1 {
+            color: var(--primary-color);
             font-size: 24px;
             font-weight: bold;
-            display: flex;
-            align-items: center;
-        }
-        
-        .sidebar-header h1 i {
-            margin-right: 10px;
-            font-size: 28px;
         }
         
         .sidebar-menu {
@@ -281,7 +464,7 @@ $conn->close();
         }
         
         .sidebar-menu a {
-            color: white;
+            color: var(--text-color);
             text-decoration: none;
             display: flex;
             align-items: center;
@@ -289,14 +472,11 @@ $conn->close();
             transition: all 0.3s ease;
         }
         
-        .sidebar-menu a:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            padding-left: 25px;
-        }
-        
+        .sidebar-menu a:hover,
         .sidebar-menu a.active {
             background-color: var(--secondary-color);
-            border-left: 4px solid white;
+            color: var(--primary-color);
+            border-left: 4px solid var(--primary-color);
         }
         
         .sidebar-menu i {
