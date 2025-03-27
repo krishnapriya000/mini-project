@@ -535,6 +535,7 @@ $orders_result = $stmt->get_result();
                             </div>
                             
                             <div class="order-products">
+                                
                                 <?php
                                 // Safely get items from orders_table with proper error checking
                                 $items = [];
@@ -606,6 +607,9 @@ $orders_result = $stmt->get_result();
                                         <i class="fas fa-times-circle"></i> Cancel Order
                                     </a>
                                 <?php endif; ?>
+
+                                    
+
                                 
                                 <?php if ($order['order_status'] == 'delivered'): ?>
                                     <a href="write_review.php?order_id=<?php echo urlencode($order['order_id']); ?>" class="action-btn review-btn">

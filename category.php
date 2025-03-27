@@ -8,6 +8,23 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Get user type from database
+$user_type = 'user'; // default
+if (isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    $user_query = "SELECT reg_type FROM signup WHERE signupid = ?";
+    $stmt = $conn->prepare($user_query);
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $user_data = $result->fetch_assoc();
+        $user_type = $user_data['reg_type'];
+    }
+    $stmt->close();
+}
+
 // Check if category ID is provided
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     header("Location: product_view.php");
@@ -452,6 +469,41 @@ if (isset($_SESSION['user_id'])) {
             line-height: 1.6;
         }
 
+        /* Modal styles for the message */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close-btn:hover {
+            color: black;
+        }
+
         /* Responsive Design */
         @media (max-width: 1024px) {
             .product-container {
@@ -597,24 +649,22 @@ if (isset($_SESSION['user_id'])) {
                             <span class="discount">(<?php echo $discount_percentage; ?>% off)</span>
                         </div>
                         <div class="product-buttons">
-                            <form action="cart.php" method="POST" style="flex: 1;">
-                                <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
-                                <input type="hidden" name="quantity" value="1">
-                                <button type="submit" class="action-button add-to-cart">
+                            <?php if ($user_type === 'user'): ?>
+                                <form action="cart.php" method="POST" style="flex: 1;">
+                                    <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="action-button add-to-cart">
+                                        <i class="fas fa-shopping-cart"></i> Add to Cart
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <button type="button" class="action-button add-to-cart" onclick="showUserOnlyMessage()">
                                     <i class="fas fa-shopping-cart"></i> Add to Cart
                                 </button>
-                            </form>
-                            <!-- <form action="cart.php" method="POST" style="flex: 1;">
-                                <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
-                                <input type="hidden" name="quantity" value="1">
-                                <button type="submit" class="action-button buy-now">
-                                    <i class="fas fa-bolt"></i> Buy Now
-                                </button>
-                            </form> -->
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
-                
             <?php 
             }
         } else { 
@@ -628,43 +678,61 @@ if (isset($_SESSION['user_id'])) {
         ?>
     </div>
     
+    <!-- Modal for showing message -->
+    <div id="userOnlyModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h3>Purchase Restricted</h3>
+            <p>Only regular users can purchase products. Sellers and admins cannot add items to cart.</p>
+            <button onclick="closeModal()" style="margin-top: 15px; padding: 8px 20px; background: #0077cc; color: white; border: none; border-radius: 5px; cursor: pointer;">OK</button>
+        </div>
+    </div>
+    
+    <script>
+        // Function to show the modal
+        function showUserOnlyMessage() {
+            document.getElementById('userOnlyModal').style.display = 'block';
+        }
+        
+        // Function to close the modal
+        function closeModal() {
+            document.getElementById('userOnlyModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            var modal = document.getElementById('userOnlyModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        function toggleLike(button, productId) {
+            // Check current favorite status
+            const isActive = button.classList.contains('active');
+            
+            // Send AJAX request to update favorites
+            fetch('update_favorites.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `product_id=${productId}&action=${isActive ? 'remove' : 'add'}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Toggle favorite button state
+                button.classList.toggle('active');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating favorites');
+            });
+        }
+    </script>
+    
     <?php
     $conn->close();
     ?>
-
-<script>
-function toggleLike(button, productId) {
-    const isActive = button.classList.contains('active');
-    
-    // Show loading state
-    button.disabled = true;
-    const icon = button.querySelector('i');
-    icon.className = 'fas fa-spinner fa-spin';
-    
-    fetch('update_favorites.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `product_id=${productId}&action=${isActive ? 'remove' : 'add'}`
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Network error');
-        return response.json();
-    })
-    .then(data => {
-        if (data.error) throw new Error(data.error);
-        button.classList.toggle('active');
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error: ' + error.message);
-    })
-    .finally(() => {
-        button.disabled = false;
-        icon.className = 'fas fa-heart';
-    });
-}
-</script>
 </body>
 </html>

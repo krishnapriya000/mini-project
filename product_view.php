@@ -8,6 +8,22 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Get user type from database
+$user_type = 'user'; // default
+if (isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    $user_query = "SELECT reg_type FROM signup WHERE signupid = ?";
+    $stmt = $conn->prepare($user_query);
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $user_data = $result->fetch_assoc();
+        $user_type = $user_data['reg_type'];
+    }
+    $stmt->close();
+}
 
 // Fetch all products from the database
 $product_query = "
@@ -54,7 +70,7 @@ try {
             position: sticky;
             top: 0;
             z-index: 1000;
-            text-align: center; /* Center align header content */
+            text-align: center;
         }
         
         .logo {
@@ -64,7 +80,7 @@ try {
             text-transform: uppercase;
             letter-spacing: 1px;
             transition: color 0.3s ease;
-            margin: 0 auto; /* Center the logo */
+            margin: 0 auto;
         }
         
         .logo:hover {
@@ -75,7 +91,7 @@ try {
             display: flex;
             flex-grow: 1;
             justify-content: center;
-            margin: 0 auto; /* Center the search bar */
+            margin: 0 auto;
             max-width: 600px;
             position: relative;
         }
@@ -88,7 +104,7 @@ try {
             font-size: 15px;
             transition: all 0.3s ease;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            text-align: center; /* Center the placeholder text */
+            text-align: center;
         }
         
         .search-container form {
@@ -125,8 +141,8 @@ try {
             display: flex;
             gap: 25px;
             align-items: center;
-            justify-content: center; /* Center the navigation links */
-            margin: 0 auto; /* Center align nav links */
+            justify-content: center;
+            margin: 0 auto;
         }
         
         .icon-btn {
@@ -168,14 +184,14 @@ try {
         
         .category-nav {
             display: flex;
-            justify-content: center; /* Center the category buttons */
+            justify-content: center;
             background: white;
             padding: 15px 0;
             border-bottom: 1px solid rgba(0,0,0,0.08);
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            text-align: center; /* Center align category text */
+            text-align: center;
         }
         
         .category-nav::-webkit-scrollbar {
@@ -213,8 +229,8 @@ try {
             gap: 30px;
             padding: 40px;
             background-color: #f8f9fa;
-            max-width: 1200px; /* Constrain max width */
-            margin: 0 auto; /* Center the product container */
+            max-width: 1200px;
+            margin: 0 auto;
         }
         
         .product-card {
@@ -225,7 +241,7 @@ try {
             transition: all 0.3s ease;
             display: flex;
             flex-direction: column;
-            text-align: center; /* Center all content in cards */
+            text-align: center;
         }
         
         .product-card:hover {
@@ -234,7 +250,7 @@ try {
         }
         
         .product-image {
-            position: relative;  /* Added for absolute positioning of like button */
+            position: relative;
             height: 250px;
             background-color: #f8f9fa;
             padding: 20px;
@@ -249,7 +265,7 @@ try {
             max-height: 220px;
             object-fit: contain;
             transition: transform 0.3s ease;
-            margin: 0 auto; /* Center the image */
+            margin: 0 auto;
         }
         
         .product-card:hover .product-image img {
@@ -258,13 +274,13 @@ try {
         
         .product-info {
             padding: 20px;
-            text-align: center; /* Center the product info */
+            text-align: center;
             background: white;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            align-items: center; /* Center items horizontally */
+            align-items: center;
         }
         
         .product-title {
@@ -278,7 +294,7 @@ try {
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
-            text-align: center; /* Center the title text */
+            text-align: center;
         }
         
         .product-price {
@@ -286,7 +302,7 @@ try {
             font-weight: 700;
             font-size: 20px;
             margin-bottom: 15px;
-            text-align: center; /* Center the price */
+            text-align: center;
         }
         
         .discount {
@@ -297,7 +313,7 @@ try {
             background-color: #e8f5e9;
             padding: 4px 8px;
             border-radius: 12px;
-            display: inline-block; /* Keep the discount inline */
+            display: inline-block;
         }
         
         .like-btn {
@@ -378,7 +394,7 @@ try {
             border-radius: 15px;
             width: 100%;
             max-width: 800px;
-            margin: 40px auto; /* Center the no products message */
+            margin: 40px auto;
             box-shadow: 0 5px 20px rgba(0,0,0,0.08);
         }
         
@@ -386,25 +402,24 @@ try {
             font-size: 24px;
             color: #2c3e50;
             margin-bottom: 15px;
-            text-align: center; /* Center the heading */
+            text-align: center;
         }
         
         .no-products p {
             color: #666;
             font-size: 16px;
             line-height: 1.6;
-            text-align: center; /* Center the paragraph */
+            text-align: center;
         }
         
-        /* Update header layout for better centering */
         .header {
-            flex-direction: column; /* Stack elements vertically */
+            flex-direction: column;
             gap: 15px;
         }
         
         @media (min-width: 768px) {
             .header {
-                flex-direction: row; /* Return to row on larger screens */
+                flex-direction: row;
             }
         }
         
@@ -414,13 +429,13 @@ try {
             }
             
             .search-container {
-                margin: 15px auto; /* Center with margin */
+                margin: 15px auto;
                 width: 90%;
             }
             
             .nav-links {
                 gap: 15px;
-                justify-content: center; /* Keep centered on mobile */
+                justify-content: center;
                 width: 100%;
             }
             
@@ -443,7 +458,7 @@ try {
         @media (max-width: 480px) {
             .logo {
                 font-size: 24px;
-                text-align: center; /* Ensure centered on smallest screens */
+                text-align: center;
                 width: 100%;
             }
             
@@ -463,6 +478,41 @@ try {
                 width: 35px;
                 height: 35px;
             }
+        }
+        
+        /* Modal styles for the message */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close-btn:hover {
+            color: black;
         }
     </style>
 </head>
@@ -488,7 +538,6 @@ try {
             <a href="profile.php" style="text-decoration: none;">
                 <div class="user-icon" title="Profile">
                     <?php 
-                    // Get first letter of username if logged in
                     if(isset($_SESSION['username'])) {
                         echo substr($_SESSION['username'], 0, 1);
                     } else {
@@ -512,7 +561,6 @@ try {
     
     <div class="category-nav">
         <?php
-        // Fetch categories for the navigation
         $cat_query = "SELECT * FROM categories_table ORDER BY name";
         $cat_result = $conn->query($cat_query);
         
@@ -530,14 +578,8 @@ try {
         <?php 
         if ($result && $result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) { 
-                // Calculate discount percentage if needed
-                $discount_percentage = 0;
-                $original_price = $row['price'];
-                
-                // You can implement your own discount logic here
-                // For now, we'll use a random discount between 10-60%
                 $discount_percentage = rand(10, 60);
-                $discounted_price = $original_price; // Set your actual discounted price calculation
+                $original_price = $row['price'];
                 ?>
                 
                 <div class="product-card">
@@ -566,25 +608,23 @@ try {
                         </div>
                         <div class="product-buttons">
                             <div class="cart-buy-buttons">
-                                <form action="cart.php" method="POST" style="flex: 1;">
-                                    <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <button type="submit" class="action-button add-to-cart">
+                                <?php if ($user_type === 'user'): ?>
+                                    <form action="cart.php" method="POST" style="flex: 1;">
+                                        <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
+                                        <input type="hidden" name="quantity" value="1">
+                                        <button type="submit" class="action-button add-to-cart">
+                                            <i class="fas fa-shopping-cart"></i> Add to Cart
+                                        </button>
+                                    </form>
+                                <?php else: ?>
+                                    <button type="button" class="action-button add-to-cart" onclick="showUserOnlyMessage()">
                                         <i class="fas fa-shopping-cart"></i> Add to Cart
                                     </button>
-                                </form>
-                                <!-- <form action="buy_now.php" method="POST" style="flex: 1;">
-                                    <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <button type="submit" class="action-button buy-now">
-                                        <i class="fas fa-bolt"></i> Buy Now
-                                    </button>
-                                </form> -->
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
                 </div>
-                
             <?php 
             }
         } else { 
@@ -597,6 +637,42 @@ try {
         } 
         ?>
     </div>
+    
+    <!-- Modal for showing message -->
+    <div id="userOnlyModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h3>Purchase Restricted</h3>
+            <p>Only regular users can purchase products. Sellers and admins cannot add items to cart.</p>
+            <button onclick="closeModal()" style="margin-top: 15px; padding: 8px 20px; background: #0077cc; color: white; border: none; border-radius: 5px; cursor: pointer;">OK</button>
+        </div>
+    </div>
+    
+    <script>
+        // Function to show the modal
+        function showUserOnlyMessage() {
+            document.getElementById('userOnlyModal').style.display = 'block';
+        }
+        
+        // Function to close the modal
+        function closeModal() {
+            document.getElementById('userOnlyModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            var modal = document.getElementById('userOnlyModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+        
+        // Like button functionality (placeholder)
+        function toggleLike(button, productId) {
+            button.classList.toggle('active');
+            // You would typically make an AJAX call here to update the database
+        }
+    </script>
     
     <?php
     // Close the connection

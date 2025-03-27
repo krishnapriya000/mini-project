@@ -1,0 +1,139 @@
+---DEBUG START 2025-03-27 08:06:22---
+SESSION DATA: Array
+(
+    [user_id] => 39
+    [signupid] => 39
+    [username] => Appu
+    [reg_type] => user
+    [last_order_id] => ORD174305273239
+)
+
+POST DATA: Array
+(
+)
+
+REQUEST DATA: Array
+(
+)
+
+2025-03-27 08:06:22 - Raw Product ID: 
+2025-03-27 08:06:22 - ERROR: No product_id in POST
+---DEBUG START 2025-03-27 08:06:25---
+SESSION DATA: Array
+(
+    [user_id] => 39
+    [signupid] => 39
+    [username] => Appu
+    [reg_type] => user
+    [last_order_id] => ORD174305273239
+)
+
+POST DATA: Array
+(
+)
+
+REQUEST DATA: Array
+(
+)
+
+2025-03-27 08:06:25 - Raw Product ID: 
+2025-03-27 08:06:25 - ERROR: No product_id in POST
+---DEBUG START 2025-03-27 08:42:23---
+SESSION DATA: Array
+(
+    [user_id] => 39
+    [signupid] => 39
+    [username] => Appu
+    [reg_type] => user
+    [last_order_id] => ORD174305273239
+)
+
+POST DATA: Array
+(
+)
+
+REQUEST DATA: Array
+(
+)
+
+2025-03-27 08:42:23 - Raw Product ID: 
+2025-03-27 08:42:23 - ERROR: No product_id in POST
+---DEBUG START 2025-03-27 08:42:24---
+SESSION DATA: Array
+(
+    [user_id] => 39
+    [signupid] => 39
+    [username] => Appu
+    [reg_type] => user
+    [last_order_id] => ORD174305273239
+)
+
+POST DATA: Array
+(
+)
+
+REQUEST DATA: Array
+(
+)
+
+2025-03-27 08:42:24 - Raw Product ID: 
+2025-03-27 08:42:24 - ERROR: No product_id in POST
+---DEBUG START 2025-03-27 08:42:30---
+SESSION DATA: Array
+(
+    [user_id] => 39
+    [signupid] => 39
+    [username] => Appu
+    [reg_type] => user
+    [last_order_id] => ORD174305273239
+)
+
+POST DATA: Array
+(
+)
+
+REQUEST DATA: Array
+(
+)
+
+2025-03-27 08:42:30 - Raw Product ID: 
+2025-03-27 08:42:30 - ERROR: No product_id in POST
+---DEBUG START 2025-03-27 10:37:20---
+SESSION DATA: Array
+(
+    [user_id] => 28
+    [signupid] => 28
+    [username] => milu
+    [reg_type] => seller
+    [seller_id] => 4
+)
+
+POST DATA: Array
+(
+)
+
+REQUEST DATA: Array
+(
+)
+
+2025-03-27 10:37:20 - Raw Product ID: 
+2025-03-27 10:37:20 - ERROR: No product_id in POST
+---DEBUG START 2025-03-27 11:35:06---
+SESSION DATA: Array
+(
+    [user_id] => 42
+    [signupid] => 42
+    [username] => christeena
+    [reg_type] => user
+)
+
+POST DATA: Array
+(
+)
+
+REQUEST DATA: Array
+(
+)
+
+2025-03-27 11:35:06 - Raw Product ID: 
+2025-03-27 11:35:06 - ERROR: No product_id in POST

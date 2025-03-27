@@ -52,20 +52,21 @@ if (!$stmt->execute()) {
 }
 $products_result = $stmt->get_result();
 
-// If no products found in cart_items, fetch a single product as fallback
-if ($products_result->num_rows == 0) {
-    $fallback_query = "SELECT product_id, name AS product_name, image_url AS product_image 
-                  FROM product_table 
-                  ORDER BY RAND() LIMIT 1";
-    $fallback_result = $conn->query($fallback_query);
-    if ($fallback_result && $fallback_result->num_rows > 0) {
-        $products_result = $fallback_result;
-    }
-}
-
 // Store all products from this order
 while ($product = $products_result->fetch_assoc()) {
     $products[] = $product;
+}
+
+// Only use fallback if we have no products AND no specific product_id requested
+if (empty($products) && !isset($_GET['product_id'])) {
+    $fallback_query = "SELECT product_id, name AS product_name, image_url AS product_image 
+                      FROM product_table 
+                      ORDER BY RAND() LIMIT 1";
+    $fallback_result = $conn->query($fallback_query);
+    if ($fallback_result && $fallback_result->num_rows > 0) {
+        $fallback_product = $fallback_result->fetch_assoc();
+        $products[] = $fallback_product;
+    }
 }
 
 // Get the selected product_id from URL or select the first product
@@ -162,6 +163,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
             // Commit transaction
             $conn->commit();
             
+            // After successful submission, redirect to prevent form resubmission
+            header("Location: write_review.php?order_id=" . urlencode($order_id) . "&product_id=" . urlencode($product_id));
+            exit();
+            
         } catch (Exception $e) {
             // Rollback on error
             $conn->rollback();
@@ -169,7 +174,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
         }
     }
 }
-
 ?>
 
 <!DOCTYPE html>
