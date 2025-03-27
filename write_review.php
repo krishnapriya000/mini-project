@@ -54,9 +54,9 @@ $products_result = $stmt->get_result();
 
 // If no products found in cart_items, fetch a single product as fallback
 if ($products_result->num_rows == 0) {
-    $fallback_query = "SELECT product_id, name AS product_name, image_url AS  
-                      FROM product_table 
-                      ORDER BY RAND() LIMIT 1";
+    $fallback_query = "SELECT product_id, name AS product_name, image_url AS product_image 
+                  FROM product_table 
+                  ORDER BY RAND() LIMIT 1";
     $fallback_result = $conn->query($fallback_query);
     if ($fallback_result && $fallback_result->num_rows > 0) {
         $products_result = $fallback_result;

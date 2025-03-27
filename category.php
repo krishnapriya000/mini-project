@@ -604,13 +604,13 @@ if (isset($_SESSION['user_id'])) {
                                     <i class="fas fa-shopping-cart"></i> Add to Cart
                                 </button>
                             </form>
-                            <form action="cart.php" method="POST" style="flex: 1;">
+                            <!-- <form action="cart.php" method="POST" style="flex: 1;">
                                 <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
                                 <input type="hidden" name="quantity" value="1">
                                 <button type="submit" class="action-button buy-now">
                                     <i class="fas fa-bolt"></i> Buy Now
                                 </button>
-                            </form>
+                            </form> -->
                         </div>
                     </div>
                 </div>

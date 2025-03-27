@@ -544,6 +544,9 @@ $orders_result = $stmt->get_result();
                                 
                                 if ($items && is_array($items) && !empty($items)) {
                                     foreach ($items as $item) {
+                                        // Improved image path handling
+                                        $imagePath = 'images/placeholder.jpg'; // Default placeholder
+                                        
                                         // Fetch product details including image from product_table
                                         $product_query = "SELECT p.*, pi.image_url 
                                                         FROM product_table p 
@@ -556,15 +559,31 @@ $orders_result = $stmt->get_result();
                                         $product_result = $stmt->get_result();
                                         $product_data = $product_result->fetch_assoc();
                                         
-                                        // Set image path with proper directory structure
-                                        $imagePath = !empty($product_data['image_url']) 
-                                            ? 'uploads/' . htmlspecialchars($product_data ['image_url']) 
-                                            : 'images/placeholder.jpg';
+                                        // Enhanced image path resolution
+                                        if ($product_data && !empty($product_data['image_url'])) {
+                                            $potential_paths = [
+                                                $_SERVER['DOCUMENT_ROOT'] . '/baby/uploads/' . $product_data['image_url'],
+                                                $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $product_data['image_url'],
+                                                'uploads/' . $product_data['image_url'],
+                                                'images/' . $product_data['image_url']
+                                            ];
+
+                                            foreach ($potential_paths as $path) {
+                                                if (file_exists($path)) {
+                                                    $imagePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $path);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        
+                                        // Sanitize image path
+                                        $imagePath = htmlspecialchars(trim($imagePath));
                                         ?>
                                         <div class="product-item">
                                             <img src="<?php echo $imagePath; ?>" 
                                                  alt="<?php echo htmlspecialchars($product_data['product_name'] ?? 'Product Image'); ?>"
-                                                 onerror="this.src='images/placeholder.jpg'">
+                                                 onerror="this.onerror=null; this.src='images/placeholder.jpg';"
+                                                 style="object-fit: cover; width: 80px; height: 80px;">
                                             <span class="product-quantity">x<?php echo htmlspecialchars($item['quantity'] ?? 1); ?></span>
                                         </div>
                                         <?php
@@ -589,12 +608,12 @@ $orders_result = $stmt->get_result();
                                 <?php endif; ?>
                                 
                                 <?php if ($order['order_status'] == 'delivered'): ?>
-    <a href="write_review.php?order_id=<?php echo urlencode($order['order_id']); ?>" class="action-btn review-btn">
-        <i class="fas fa-star"></i> Write Review
-    </a>
-<?php endif; ?>
+                                    <a href="write_review.php?order_id=<?php echo urlencode($order['order_id']); ?>" class="action-btn review-btn">
+                                        <i class="fas fa-star"></i> Write Review
+                                    </a>
+                                <?php endif; ?>
                                 
-                                <a href="view_details.php" class="action-btn view-details-btn">
+                                <a href="view_details.php?order_id=<?php echo urlencode($order['order_id']); ?>" class="action-btn view-details-btn">
                                     <i class="fas fa-eye"></i> View Details
                                 </a>
                             </div>
