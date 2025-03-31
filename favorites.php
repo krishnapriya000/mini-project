@@ -19,6 +19,20 @@
  
  // Get favorite products with error handling
  try {
+     // First get the user_id from user_table
+     $user_query = "SELECT user_id FROM user_table WHERE signupid = ?";
+     $stmt = $conn->prepare($user_query);
+     $stmt->bind_param("i", $_SESSION['user_id']);
+     $stmt->execute();
+     $user_result = $stmt->get_result();
+     
+     if (!$user_result->num_rows) {
+         throw new Exception("User not found");
+     }
+     
+     $user_id = $user_result->fetch_assoc()['user_id'];
+     
+     // Then get the favorite products
      $query = "SELECT p.*, c.name AS category_name 
                FROM product_table p
                JOIN user_favorites uf ON p.product_id = uf.product_id
@@ -27,15 +41,8 @@
                ORDER BY uf.created_at DESC";
      
      $stmt = $conn->prepare($query);
-     if (!$stmt) {
-         throw new Exception("Prepare failed: " . $conn->error);
-     }
-     
-     $stmt->bind_param("i", $userId);
-     if (!$stmt->execute()) {
-         throw new Exception("Execute failed: " . $stmt->error);
-     }
-     
+     $stmt->bind_param("i", $user_id);
+     $stmt->execute();
      $result = $stmt->get_result();
      $favoriteProducts = $result->fetch_all(MYSQLI_ASSOC);
      
@@ -56,8 +63,125 @@
      <meta charset="UTF-8">
      <meta name="viewport" content="width=device-width, initial-scale=1.0">
      <title>My Favorites - BabyCubs</title>
-     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
      <style>
+         /* Add these header styles */
+         .header {
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+             padding: 20px 40px;
+             background: white;
+             box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+             position: sticky;
+             top: 0;
+             z-index: 1000;
+         }
+
+         .logo {
+             font-size: 28px;
+             font-weight: 800;
+             background: linear-gradient(45deg, #0077cc, #1a8cff);
+             -webkit-background-clip: text;
+             -webkit-text-fill-color: transparent;
+             text-transform: uppercase;
+             letter-spacing: 1px;
+             transition: transform 0.3s ease;
+         }
+
+         .logo:hover {
+             transform: scale(1.05);
+         }
+
+         .search-container {
+             flex-grow: 1;
+             max-width: 600px;
+             margin: 0 40px;
+         }
+
+         .search-container form {
+             display: flex;
+             position: relative;
+             width: 100%;
+         }
+
+         .search-container input {
+             width: 100%;
+             padding: 12px 20px;
+             border: 2px solid #e0e0e0;
+             border-radius: 30px;
+             font-size: 15px;
+             transition: all 0.3s ease;
+             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+         }
+
+         .search-container input:focus {
+             border-color: #0077cc;
+             box-shadow: 0 0 15px rgba(0,119,204,0.1);
+         }
+
+         .search-btn {
+             position: absolute;
+             right: 0;
+             top: 0;
+             height: 100%;
+             padding: 0 25px;
+             background: linear-gradient(45deg, #0077cc, #1a8cff);
+             color: white;
+             border: none;
+             border-radius: 0 30px 30px 0;
+             cursor: pointer;
+             font-weight: 500;
+             transition: all 0.3s ease;
+         }
+
+         .search-btn:hover {
+             background: linear-gradient(45deg, #005fa3, #0066cc);
+         }
+
+         .nav-links {
+             display: flex;
+             gap: 25px;
+             align-items: center;
+         }
+
+         .icon-btn {
+             background: none;
+             border: none;
+             cursor: pointer;
+             font-size: 22px;
+             color: #2c3e50;
+             padding: 10px;
+             border-radius: 50%;
+             transition: all 0.3s ease;
+         }
+
+         .icon-btn:hover {
+             color: #0077cc;
+             background-color: rgba(0,119,204,0.1);
+             transform: translateY(-2px);
+         }
+
+         .user-icon {
+             width: 40px;
+             height: 40px;
+             background: linear-gradient(45deg, #6c5ce7, #8e44ad);
+             color: white;
+             border-radius: 50%;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             font-weight: bold;
+             font-size: 18px;
+             cursor: pointer;
+             transition: all 0.3s ease;
+             box-shadow: 0 4px 15px rgba(108,92,231,0.3);
+         }
+
+         .user-icon:hover {
+             transform: scale(1.1);
+         }
+         
          body {
              font-family: 'Poppins', Arial, sans-serif;
              background: linear-gradient(to bottom, #f8f9fa, #e6ebfa);
@@ -247,8 +371,52 @@
      </style>
  </head>
  <body>
-     <!-- Include your header/navigation -->
-     <?php include_once($_SERVER['DOCUMENT_ROOT'] . '/baby/header.php'); ?>
+     <div class="header">
+         <a href="index.php" style="text-decoration: none;">
+             <div class="logo">BabyCubs</div>
+         </a>
+         
+         <div class="search-container">
+             <form action="search.php" method="GET">
+                 <input type="text" name="query" placeholder="Search products">
+                 <button type="submit" class="search-btn">Search</button>
+             </form>
+         </div>
+         
+         <div class="nav-links">
+             <a href="index.php" style="text-decoration: none;">
+                 <button class="icon-btn" title="Home">
+                     <i class="fas fa-home"></i>
+                 </button>
+             </a>
+             <a href="favorites.php" style="text-decoration: none;">
+                 <button class="icon-btn" title="Favorites">
+                     <i class="fas fa-heart"></i>
+                 </button>
+             </a>
+             <a href="profile.php" style="text-decoration: none;">
+                 <div class="user-icon" title="Profile">
+                     <?php 
+                     if(isset($_SESSION['username'])) {
+                         echo substr($_SESSION['username'], 0, 1);
+                     } else {
+                         echo "P"; 
+                     }
+                     ?>
+                 </div>
+             </a>
+             <a href="cart.php" style="text-decoration: none;">
+                 <button class="icon-btn" title="Cart">
+                     <i class="fas fa-shopping-cart"></i>
+                 </button>
+             </a>
+             <a href="logout.php" style="text-decoration: none;">
+                 <button class="icon-btn" title="Logout">
+                     <i class="fas fa-sign-out-alt"></i>
+                 </button>
+             </a>
+         </div>
+     </div>
      
      <div class="container">
          <div class="favorites-header">
@@ -279,17 +447,10 @@
                                  ₹<?php echo number_format($product['price'], 2); ?>
                              </div>
                              <div class="product-buttons">
-                                 <form action="cart.php" method="POST" style="flex: 1;">
+                                 <form action="cart.php" method="POST" style="width: 100%;">
                                      <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>">
                                      <button type="submit" class="action-button add-to-cart">
                                          <i class="fas fa-shopping-cart"></i> Add to Cart
-                                     </button>
-                                 </form>
-                                 <form action="checkout.php" method="POST" style="flex: 1;">
-                                     <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>">
-                                     <input type="hidden" name="quantity" value="1">
-                                     <button type="submit" class="action-button buy-now">
-                                         <i class="fas fa-bolt"></i> Buy Now
                                      </button>
                                  </form>
                              </div>

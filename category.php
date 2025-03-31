@@ -708,25 +708,35 @@ if (isset($_SESSION['user_id'])) {
         }
 
         function toggleLike(button, productId) {
-            // Check current favorite status
-            const isActive = button.classList.contains('active');
+            // Show loading state
+            button.disabled = true;
+            const icon = button.querySelector('i');
+            const originalClass = icon.classList.contains('fa-heart') ? 'fa-heart' : 'fa-heart-o';
+            icon.classList.replace(originalClass, 'fa-spinner');
+            icon.classList.add('fa-spin');
             
-            // Send AJAX request to update favorites
             fetch('update_favorites.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `product_id=${productId}&action=${isActive ? 'remove' : 'add'}`
+                body: `product_id=${productId}&action=${button.classList.contains('active') ? 'remove' : 'add'}`
             })
             .then(response => response.json())
             .then(data => {
-                // Toggle favorite button state
+                if (data.error) {
+                    throw new Error(data.error);
+                }
                 button.classList.toggle('active');
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error updating favorites');
+                alert('Failed to update favorites: ' + error.message);
+            })
+            .finally(() => {
+                button.disabled = false;
+                icon.classList.remove('fa-spin');
+                icon.classList.replace('fa-spinner', 'fa-heart');
             });
         }
     </script>

@@ -25,6 +25,33 @@ if (isset($_SESSION['user_id'])) {
     $stmt->close();
 }
 
+// Get favorited products for the current user
+$favorited_products = [];
+if (isset($_SESSION['user_id'])) {
+    // First get user_id from user_table
+    $user_query = "SELECT user_id FROM user_table WHERE signupid = ?";
+    $stmt = $conn->prepare($user_query);
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $user_result = $stmt->get_result();
+    
+    if ($user_result->num_rows > 0) {
+        $user_id = $user_result->fetch_assoc()['user_id'];
+        
+        // Then get favorited products
+        $favorites_query = "SELECT product_id FROM user_favorites WHERE user_id = ?";
+        $stmt = $conn->prepare($favorites_query);
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $favorites_result = $stmt->get_result();
+        
+        while ($row = $favorites_result->fetch_assoc()) {
+            $favorited_products[] = $row['product_id'];
+        }
+    }
+    $stmt->close();
+}
+
 // Fetch all products from the database
 $product_query = "
     SELECT p.*, c.name AS category_name 
@@ -535,6 +562,11 @@ try {
                     <i class="fas fa-home"></i>
                 </button>
             </a>
+            <a href="favorites.php" style="text-decoration: none;">
+                <button class="icon-btn" title="Favorites">
+                    <i class="fas fa-heart"></i>
+                </button>
+            </a>
             <a href="profile.php" style="text-decoration: none;">
                 <div class="user-icon" title="Profile">
                     <?php 
@@ -584,7 +616,8 @@ try {
                 
                 <div class="product-card">
                     <div class="product-image">
-                        <button class="like-btn" onclick="toggleLike(this, <?php echo $row['product_id']; ?>)">
+                        <button class="like-btn <?php echo in_array($row['product_id'], $favorited_products) ? 'active' : ''; ?>" 
+                                onclick="toggleLike(this, <?php echo $row['product_id']; ?>)">
                             <i class="fas fa-heart"></i>
                         </button>
                         <a href="product_details.php?id=<?php echo $row['product_id']; ?>">
@@ -667,10 +700,37 @@ try {
             }
         }
         
-        // Like button functionality (placeholder)
         function toggleLike(button, productId) {
-            button.classList.toggle('active');
-            // You would typically make an AJAX call here to update the database
+            // Show loading state
+            button.disabled = true;
+            const icon = button.querySelector('i');
+            const originalClass = icon.classList.contains('fa-heart') ? 'fa-heart' : 'fa-heart-o';
+            icon.classList.replace(originalClass, 'fa-spinner');
+            icon.classList.add('fa-spin');
+            
+            fetch('update_favorites.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `product_id=${productId}&action=${button.classList.contains('active') ? 'remove' : 'add'}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                button.classList.toggle('active');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update favorites: ' + error.message);
+            })
+            .finally(() => {
+                button.disabled = false;
+                icon.classList.remove('fa-spin');
+                icon.classList.replace('fa-spinner', 'fa-heart');
+            });
         }
     </script>
     

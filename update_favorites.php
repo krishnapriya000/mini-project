@@ -18,7 +18,20 @@ if (!isset($_POST['product_id'], $_POST['action'])) {
     exit();
 }
 
-$userId = $_SESSION['user_id'];
+// Get user_id from user_table using signupid
+$signupid = $_SESSION['user_id'];
+$user_query = "SELECT user_id FROM user_table WHERE signupid = ?";
+$stmt = $conn->prepare($user_query);
+$stmt->bind_param("i", $signupid);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if (!$result->num_rows) {
+    echo json_encode(['error' => 'User not found']);
+    exit();
+}
+
+$user_id = $result->fetch_assoc()['user_id'];
 $productId = (int)$_POST['product_id'];
 $action = $_POST['action'] === 'add' ? 'add' : 'remove';
 
@@ -34,10 +47,10 @@ try {
 
     if ($action === 'add') {
         $stmt = $conn->prepare("INSERT IGNORE INTO user_favorites (user_id, product_id) VALUES (?, ?)");
-        $stmt->bind_param("ii", $userId, $productId);
+        $stmt->bind_param("ii", $user_id, $productId);
     } else {
         $stmt = $conn->prepare("DELETE FROM user_favorites WHERE user_id = ? AND product_id = ?");
-        $stmt->bind_param("ii", $userId, $productId);
+        $stmt->bind_param("ii", $user_id, $productId);
     }
     
     if (!$stmt->execute()) {
