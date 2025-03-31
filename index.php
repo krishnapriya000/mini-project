@@ -78,8 +78,6 @@ session_start();
             display: block;
         }
 
-
-
         body {
             font-family: Arial, sans-serif;
             background-color: rgb(255, 234, 249);
@@ -130,10 +128,27 @@ session_start();
             text-decoration: none;
             color: #333;
             transition: color 0.3s ease;
+            position: relative;
         }
 
         .nav-link:hover {
             color: #007bff;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -5px;
+            left: 0;
+            background-color: #0077cc;
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 100%;
         }
 
         .search-cart {
@@ -418,45 +433,233 @@ session_start();
 .profile-icon-container:hover .profile-dropdown {
     display: block;
 }
+
+.categories-section {
+    padding: 60px 0;
+    background: linear-gradient(to bottom, #fff, #f8f9fa);
+}
+
+.category-block {
+    margin-bottom: 60px;
+    scroll-margin-top: 100px;
+}
+
+.category-title {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 30px;
+    text-align: center;
+    position: relative;
+    padding-bottom: 15px;
+}
+
+.category-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(to right, #0077cc, #1a8cff);
+    border-radius: 3px;
+}
+
+.category-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.category-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.category-card a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.card-body {
+    padding: 20px;
+    text-align: center;
+}
+
+.card-body h5 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.card-body p {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.shop-now-link {
+    color: #0077cc;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.category-card:hover .shop-now-link {
+    color: #005fa3;
+}
+
+.brand-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.brand-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+.search-container {
+    flex-grow: 1;
+    max-width: 600px;
+    margin: 0 40px;
+    position: relative;
+}
+
+.search-container form {
+    display: flex;
+    position: relative;
+    width: 100%;
+}
+
+.search-container input {
+    width: 100%;
+    padding: 12px 20px;
+    padding-right: 50px;
+    border: 2px solid #e0e0e0;
+    border-radius: 30px;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.search-container input:focus {
+    border-color: #0077cc;
+    box-shadow: 0 0 15px rgba(0,119,204,0.1);
+    outline: none;
+}
+
+.search-btn {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 40px;
+    width: 40px;
+    padding: 0;
+    background: linear-gradient(45deg, #0077cc, #1a8cff);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-btn:hover {
+    background: linear-gradient(45deg, #005fa3, #0066cc);
+    transform: translateY(-50%) scale(1.05);
+}
+
+.search-btn i {
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    .search-container {
+        margin: 0 20px;
+    }
+
+    .search-container input {
+        padding: 10px 15px;
+        font-size: 14px;
+    }
+
+    .search-btn {
+        height: 35px;
+        width: 35px;
+    }
+}
+
+.profile-icon-container .profile-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-icon-container .profile-dropdown a i {
+    width: 20px;
+    text-align: center;
+}
+
+.profile-dropdown a:hover {
+    background-color: #e9ecef;
+    color: #0077cc;
+}
     </style>
 </head>
 <body>
 <nav class="navbar">
         <div class="container navbar-content">
-            <a href="#" class="navbar-brand">BabyCubs</a>
+            <a href="index.php" class="navbar-brand">BabyCubs</a>
+            
+            <div class="search-container">
+                <form action="search.php" method="GET">
+                    <input type="text" name="query" placeholder="Search products..." class="search-box">
+                    <button type="submit" class="search-btn">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+            </div>
+
             <ul class="nav-menu">
                 <li class="nav-item"><a href="#home" class="nav-link">Home</a></li>
-                <li class="nav-item"><a href="#baby" class="nav-link">Baby</a></li>
-                <li class="nav-item"><a href="#toddler" class="nav-link">Toddler</a></li>
-                <li class="nav-item"><a href="#kids" class="nav-link">Kids</a></li>
-                <li class="nav-item"><a href="#brands" class="nav-link">Brands</a></li>
+                <li class="nav-item"><a href="#baby-collection" class="nav-link">Baby</a></li>
+                <li class="nav-item"><a href="#toddler-collection" class="nav-link">Toddler</a></li>
+                <li class="nav-item"><a href="#kids-collection" class="nav-link">Kids</a></li>
+                <li class="nav-item"><a href="#featured-brands" class="nav-link">Brands</a></li>
             </ul>
-            <div class="search-cart">
-                <input type="search" placeholder="Search products..." class="search-box">
-                <a href="cart.php" class="nav-link">🛒</a>
-                <div class="profile-icon-container">
-    <?php if (isset($_SESSION['username'])): ?>
-        <div class="profile-icon">
-    <i class="fas fa-user"></i>
-</div>
-<span><?php echo htmlspecialchars($_SESSION['username']); ?></span>
 
-        <div class="profile-dropdown">
-            <a href="profile.php"><i class="fas fa-user-circle"></i> Profile</a>
-            <a href="view_order_details.php"><i class="fas fa-shopping-bag"></i> Orders</a>
-            <a href="favorites.php"><i class="fas fa-heart"></i> Favorites</a>
-            <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
-        </div>
-    <?php else: ?>
-        <div class="profile-icon">
-            <i class="fas fa-user"></i>
-        </div>
-        <div class="profile-dropdown">
-            <a href="login.php">Login</a>
-            <a href="signup.php">Sign Up</a>
-        </div>
-    <?php endif; ?>
-</div>
+            <div class="profile-icon-container">
+                <?php if (isset($_SESSION['username'])): ?>
+                    <div class="profile-icon">
+                        <?php echo substr($_SESSION['username'], 0, 1); ?>
+                    </div>
+                    <div class="profile-dropdown">
+                        <a href="profile.php"><i class="fas fa-user"></i> Profile</a>
+                        <a href="favorites.php"><i class="fas fa-heart"></i> Favorites</a>
+                        <a href="cart.php"><i class="fas fa-shopping-cart"></i> Cart</a>
+                        <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                <?php else: ?>
+                    <div class="profile-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="profile-dropdown">
+                        <a href="login.php"><i class="fas fa-sign-in-alt"></i> Login</a>
+                        <a href="signup.php"><i class="fas fa-user-plus"></i> Sign Up</a>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </nav>
@@ -477,139 +680,159 @@ session_start();
         </div>
     </section>
 
-    <section id="baby" class="baby">
+    <section class="categories-section">
         <div class="container">
-            <h2 class="section-title">Shop For Baby</h2>
-            <div class="categories-grid">
-                
-                <div class="category-card">
-                <a href="category.php">
-                    <img src="./images/pic13.jpg" class="card-img" alt="Toys">
-                 </a>
-                    <div class="card-body">
-                        <h5>Baby Boy</h5>
+            <h2 class="section-title">Shop By Category</h2>
+            
+            <!-- Baby Category -->
+            <div id="baby-collection" class="category-block">
+                <h3 class="category-title">Baby Collection (0-24 months)</h3>
+                <div class="products-grid">
+                    <div class="category-card">
+                        <a href="category.php?type=baby-boy">
+                            <img src="./images/pic13.jpg" class="card-img" alt="Baby Boy">
+                            <div class="card-body">
+                                <h5>Baby Boy</h5>
+                                <p>Clothing, Accessories & More</p>
+                                <span class="shop-now-link">Shop Now →</span>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="category-card">
+                        <a href="category.php?type=baby-girl">
+                            <img src="./images/pic20.jpg" class="card-img" alt="Baby Girl">
+                            <div class="card-body">
+                                <h5>Baby Girl</h5>
+                                <p>Dresses, Sets & More</p>
+                                <span class="shop-now-link">Shop Now →</span>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="category-card">
+                        <a href="category.php?type=newborn">
+                            <img src="./images/pic.jpg" class="card-img" alt="Newborn">
+                            <div class="card-body">
+                                <h5>Newborn Essentials</h5>
+                                <p>First Clothes & Care</p>
+                                <span class="shop-now-link">Shop Now →</span>
+                            </div>
+                        </a>
                     </div>
                 </div>
-                <div class="category-card">
-                <a href="">
-                    <img src="./images/pic20.jpg" class="card-img" alt="Care">
-                </a>
-                    <div class="card-body">
-                        <h5>Baby Girl</h5>
+            </div>
+
+            <!-- Toddler Category -->
+            <div id="toddler-collection" class="category-block">
+                <h3 class="category-title">Toddler Collection (2-4 years)</h3>
+                <div class="products-grid">
+                    <div class="category-card">
+                        <a href="category.php?type=toddler-boy">
+                            <img src="./images/pic22.jpg" class="card-img" alt="Toddler Boy">
+                            <div class="card-body">
+                                <h5>Toddler Boy</h5>
+                                <p>Casual & Party Wear</p>
+                                <span class="shop-now-link">Shop Now →</span>
+                            </div>
+                        </a>
                     </div>
-                    
+                    <div class="category-card">
+                        <a href="category.php?type=toddler-girl">
+                            <img src="./images/pic21.jpg" class="card-img" alt="Toddler Girl">
+                            <div class="card-body">
+                                <h5>Toddler Girl</h5>
+                                <p>Dresses & Sets</p>
+                                <span class="shop-now-link">Shop Now →</span>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="category-card">
+                        <a href="category.php?type=toddler-accessories">
+                            <img src="./images/ass.jpg" class="card-img" alt="Accessories">
+                            <div class="card-body">
+                                <h5>Accessories</h5>
+                                <p>Shoes, Bags & More</p>
+                                <span class="shop-now-link">Shop Now →</span>
+                            </div>
+                        </a>
+                    </div>
                 </div>
-                <div class="category-card">
-                    <a href="newborn.php">
-                    <img src="./images/pic.jpg" class="card-img" alt="Clothing">
-                     </a>
-                    <div class="card-body">
-                        <h5>New Born</h5>
+            </div>
+
+            <!-- Kids Category -->
+            <div id="kids-collection" class="category-block">
+                <h3 class="category-title">Kids Collection (4-12 years)</h3>
+                <div class="products-grid">
+                    <div class="category-card">
+                        <a href="category.php?type=kids-boy">
+                            <img src="./images/pic18.jpg" class="card-img" alt="Kids Boy">
+                            <div class="card-body">
+                                <h5>Boys Fashion</h5>
+                                <p>Trendy & Comfortable</p>
+                                <span class="shop-now-link">Shop Now →</span>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="category-card">
+                        <a href="category.php?type=kids-girl">
+                            <img src="./images/pic17.jpg" class="card-img" alt="Kids Girl">
+                            <div class="card-body">
+                                <h5>Girls Fashion</h5>
+                                <p>Stylish Collections</p>
+                                <span class="shop-now-link">Shop Now →</span>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="category-card">
+                        <a href="category.php?type=kids-fashion">
+                            <img src="./images/pic19.jpg" class="card-img" alt="Kids Fashion">
+                            <div class="card-body">
+                                <h5>Fashion & Trends</h5>
+                                <p>Latest Collections</p>
+                                <span class="shop-now-link">Shop Now →</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Featured Brands -->
+            <div id="featured-brands" class="category-block">
+                <h3 class="category-title">Featured Brands</h3>
+                <div class="products-grid">
+                    <div class="brand-card">
+                        <a href="category.php?brand=mackly">
+                            <img src="./images/pic29.jpg" class="card-img" alt="Mackly">
+                            <div class="card-body">
+                                <h5>Mackly</h5>
+                                <p>Premium Collection</p>
+                                <span class="shop-now-link">Explore →</span>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="brand-card">
+                        <a href="category.php?brand=firstcry">
+                            <img src="./images/pic30.jpg" class="card-img" alt="FirstCry">
+                            <div class="card-body">
+                                <h5>FirstCry</h5>
+                                <p>Trusted Brand</p>
+                                <span class="shop-now-link">Explore →</span>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="brand-card">
+                        <a href="category.php?brand=edamamma">
+                            <img src="./images/pic31.jpg" class="card-img" alt="Ed-a-Mamma">
+                            <div class="card-body">
+                                <h5>Ed-a-Mamma</h5>
+                                <p>Organic Collection</p>
+                                <span class="shop-now-link">Explore →</span>
+                            </div>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </section>
-
-    <section id="toddler" class="products">
-        <div class="container">
-            <h2 class="section-title">Toddler Products</h2>
-            <div class="products-grid">
-                <div class="product-card">
-                    <img src="./images/pic22.jpg" class="product-img" alt="Product 1">
-                    <div class="card-body">
-                        <h5>Boy</h5>
-                        <p>$29.99</p>
-                        <a href="#" class="btn">Add to Cart</a>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="./images/pic21.jpg" class="product-img" alt="Product 1">
-                    <div class="card-body">
-                        <h5>Girl</h5>
-                        <p>$29.99</p>
-                        <a href="#" class="btn">Add to Cart</a>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="./images/ass.jpg" class="product-img" alt="Product 1">
-                    <div class="card-body">
-                        <h5>Accessories</h5>
-                        <p>$29.99</p>
-                        <a href="#" class="btn">Add to Cart</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="kids" class="products">
-        <div class="container">
-            <h2 class="section-title">Kids Products</h2>
-            <div class="products-grid">
-                <div class="product-card">
-                    <img src="./images/pic18.jpg" class="product-img" alt="Product 1">
-                    <div class="card-body">
-                        <h5>Boy</h5>
-                        <p>$29.99</p>
-                        <a href="#" class="btn">Add to Cart</a>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="./images/pic17.jpg" class="product-img" alt="Product 1">
-                    <div class="card-body">
-                        <h5>Girl</h5>
-                        <p>$29.99</p>
-                        <a href="#" class="btn">Add to Cart</a>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="./images/pic19.jpg" class="product-img" alt="Product 1">
-                    <div class="card-body">
-                        <h5>Fashion</h5>
-                        <p>$29.99</p>
-                        <a href="#" class="btn">Add to Cart</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="brands" class="brands">
-        <div class="container">
-            <h2 class="section-title">Brands</h2>
-            <div class="products-grid">
-                <div class="product-card">
-                    <img src="./images/pic29.jpg" class="product-img" alt="Product 1">
-                    <div class="card-body">
-                        <h5>Mackly</h5>
-                        <p>$29.99</p>
-                        <a href="#" class="btn">Add to Cart</a>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="./images/pic30.jpg" class="product-img" alt="Product 1">
-                    <div class="card-body">
-                        <h5>FirstCry</h5>
-                        <p>$29.99</p>
-                        <a href="#" class="btn">Add to Cart</a>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <img src="./images/pic31.jpg" class="product-img" alt="Product 1">
-                    <div class="card-body">
-                        <h5>Ed-a Mamma</h5>
-                        <p>$29.99</p>
-                        <a href="#" class="btn">Add to Cart</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-
-
-
 
     <section class="newsletter">
         <div class="container">
@@ -682,6 +905,49 @@ session_start();
     });
 });
 
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get all nav links
+        const navLinks = document.querySelectorAll('.nav-link');
+        
+        // Add click event listeners for smooth scrolling
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                if (targetSection) {
+                    targetSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Highlight active section while scrolling
+        window.addEventListener('scroll', function() {
+            let current = '';
+            const sections = document.querySelectorAll('.category-block');
+            const heroSection = document.querySelector('.hero-section');
+
+            // Check hero section first
+            if (window.scrollY <= heroSection.offsetHeight) {
+                current = 'home';
+            } else {
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (window.scrollY >= sectionTop - 150) {
+                        current = section.getAttribute('id');
+                    }
+                });
+            }
+
+            // Update active link
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').substring(1) === current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    });
     </script>
 </body>
 </html> 

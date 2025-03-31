@@ -421,6 +421,134 @@ function storePaymentDetails($conn, $order_id, $signupid, $payment_id, $amount, 
             color: #666;
             font-size: 14px;
         }
+
+        .order-summary-container {
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .order-items-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .order-item-row {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .order-item-row:last-child {
+            border-bottom: none;
+        }
+
+        .item-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-right: 15px;
+        }
+
+        .item-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .item-details {
+            flex: 1;
+        }
+
+        .item-details h4 {
+            font-size: 14px;
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+
+        .item-meta {
+            font-size: 12px;
+            color: #666;
+            margin: 0;
+        }
+
+        .item-price {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .price-breakdown {
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .price-row.total {
+            border-top: 2px solid #eee;
+            margin-top: 10px;
+            padding-top: 15px;
+            font-weight: 600;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .payment-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #0077cc, #1a8cff);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .payment-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,119,204,0.2);
+        }
+
+        .payment-btn i {
+            font-size: 18px;
+        }
+
+        /* Scrollbar styling */
+        .order-items-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .order-items-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .order-items-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        .order-items-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
     </style>
 </head>
 <body>
@@ -494,62 +622,57 @@ function storePaymentDetails($conn, $order_id, $signupid, $payment_id, $amount, 
             <div class="checkout-summary">
                 <h2 class="section-title">Order Summary</h2>
                 
-                <div class="order-items">
-                    <?php 
-                    if ($cart_items && $cart_items->num_rows > 0):
-                        while($item = $cart_items->fetch_assoc()): 
-                            $item_total = $item['quantity'] * $item['price'];
-                    ?>
-                        <div class="order-item">
-                            <div class="order-item-image">
-                                <?php if (!empty($item['image_url'])): ?>
-                                    <img src="<?php echo htmlspecialchars($item['image_url']); ?>" 
-                                         alt="<?php echo htmlspecialchars($item['name']); ?>"
-                                         onerror="this.src='placeholder.jpg'">
-                                <?php else: ?>
-                                    <img src="placeholder.jpg" alt="No Image Available">
-                                <?php endif; ?>
+                <div class="order-summary-container">
+                    <!-- Compact Order Items List -->
+                    <div class="order-items-list">
+                        <?php 
+                        if ($cart_items && $cart_items->num_rows > 0):
+                            while($item = $cart_items->fetch_assoc()): 
+                                $item_total = $item['quantity'] * $item['price'];
+                        ?>
+                            <div class="order-item-row">
+                                <div class="item-image">
+                                    <img src="<?php echo htmlspecialchars($item['image_url'] ?? 'placeholder.jpg'); ?>" 
+                                         alt="<?php echo htmlspecialchars($item['name']); ?>">
+                                </div>
+                                <div class="item-details">
+                                    <h4><?php echo htmlspecialchars($item['name']); ?></h4>
+                                    <p class="item-meta">Qty: <?php echo $item['quantity']; ?></p>
+                                </div>
+                                <div class="item-price">
+                                    ₹<?php echo number_format($item_total, 2); ?>
+                                </div>
                             </div>
-                            <div class="order-item-details">
-                                <div class="order-item-name"><?php echo htmlspecialchars($item['name']); ?></div>
-                                <div class="order-item-price">₹<?php echo number_format($item['price'], 2); ?></div>
-                                <div class="order-item-quantity">Quantity: <?php echo $item['quantity']; ?></div>
-                                <div class="order-item-total">Total: ₹<?php echo number_format($item_total, 2); ?></div>
-                            </div>
-                        </div>
-                    <?php 
-                        endwhile;
-                    else: 
-                    ?>
-                        <div class="empty-cart">
-                            <p>Your cart is empty. Please add items before checking out.</p>
-                            <a href="product_view.php" class="btn btn-primary">Continue Shopping</a>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                        <?php 
+                            endwhile;
+                        endif; 
+                        ?>
+                    </div>
 
-                <?php if ($cart_items && $cart_items->num_rows > 0): ?>
-                    <div class="summary-details">
-                        <div class="summary-item">
-                            <span class="summary-label">Subtotal (<?php echo $total_items; ?> items)</span>
-                            <span class="summary-value">₹<?php echo number_format($subtotal, 2); ?></span>
+                    <!-- Price Breakdown -->
+                    <div class="price-breakdown">
+                        <div class="price-row">
+                            <span>Subtotal</span>
+                            <span>₹<?php echo number_format($subtotal, 2); ?></span>
                         </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Shipping</span>
-                            <span class="summary-value"><?php echo $shipping > 0 ? '₹' . number_format($shipping, 2) : 'FREE'; ?></span>
+                        <div class="price-row">
+                            <span>Shipping</span>
+                            <span><?php echo $shipping > 0 ? '₹' . number_format($shipping, 2) : 'FREE'; ?></span>
                         </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Tax (5%)</span>
-                            <span class="summary-value">₹<?php echo number_format($tax, 2); ?></span>
+                        <div class="price-row">
+                            <span>Tax (5%)</span>
+                            <span>₹<?php echo number_format($tax, 2); ?></span>
                         </div>
-                        <div class="summary-item total">
-                            <span class="summary-label">Total</span>
-                            <span class="summary-value">₹<?php echo number_format($total, 2); ?></span>
+                        <div class="price-row total">
+                            <span>Total</span>
+                            <span>₹<?php echo number_format($total, 2); ?></span>
                         </div>
                     </div>
-                <?php endif; ?>
-                
-                <button id="razorpay-button" class="payment-btn">Pay Now</button>
+
+                    <button id="razorpay-button" class="payment-btn">
+                        <i class="fas fa-lock"></i> Pay Securely Now
+                    </button>
+                </div>
             </div>
         </div>
     </div>
