@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 require_once($_SERVER['DOCUMENT_ROOT'] . '/baby/connect.php');
@@ -263,6 +262,15 @@ $sellersResult = mysqli_query($conn, "SELECT * FROM seller");
         .btn { padding: 5px 10px; border: none; cursor: pointer; border-radius: 4px; }
         .btn-approve { background: #27ae60; color: white; }
         .btn-reject { background: #e74c3c; color: white; }
+        .btn-view {
+            background: #3498db;
+            color: white;
+            transition: background 0.3s;
+        }
+
+        .btn-view:hover {
+            background: #2980b9;
+        }
     </style>
 </head>
 <!DOCTYPE html>
@@ -302,6 +310,15 @@ $sellersResult = mysqli_query($conn, "SELECT * FROM seller");
         .btn { padding: 5px 10px; border: none; cursor: pointer; border-radius: 4px; }
         .btn-approve { background: #27ae60; color: white; }
         .btn-reject { background: #e74c3c; color: white; }
+        .btn-view {
+            background: #3498db;
+            color: white;
+            transition: background 0.3s;
+        }
+
+        .btn-view:hover {
+            background: #2980b9;
+        }
     </style>
 </head>
 <body>
@@ -336,16 +353,15 @@ $sellersResult = mysqli_query($conn, "SELECT * FROM seller");
                     <thead>
                         <tr>
                             <th>Username</th>
-                            <th>Reg Type</th>
                             <th>Status</th>
                             <th>Actions</th>
+                            <th>Details</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php while ($user = mysqli_fetch_assoc($usersResult)) { ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($user['username']); ?></td>
-                                <td><?php echo htmlspecialchars($user['reg_type']); ?></td>
                                 <td><?php echo ucfirst($user['status']); ?></td>
                                 <td>
                                     <form method="post" style="display: inline;">
@@ -356,6 +372,11 @@ $sellersResult = mysqli_query($conn, "SELECT * FROM seller");
                                             <button class="btn btn-reject" name="action" value="deactivate_user">Deactivate</button>
                                         <?php } ?>
                                     </form>
+                                </td>
+                                <td>
+                                    <button class="btn btn-view" onclick="window.location.href='user_report.php?user_id=<?php echo $user['user_id']; ?>'">
+                                        View Details
+                                    </button>
                                 </td>
                             </tr>
                         <?php } ?>
