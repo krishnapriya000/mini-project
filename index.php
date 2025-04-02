@@ -649,6 +649,7 @@ html {
                         <a href="profile.php"><i class="fas fa-user"></i> Profile</a>
                         <a href="favorites.php"><i class="fas fa-heart"></i> Favorites</a>
                         <a href="cart.php"><i class="fas fa-shopping-cart"></i> Cart</a>
+                        <a href="view_order_details.php"><i class="fas fa-heart"></i> My orders</a>
                         <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
                     </div>
                 <?php else: ?>

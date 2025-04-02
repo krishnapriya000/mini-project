@@ -231,17 +231,30 @@ if ($conn->query($alter_query) === TRUE) {
 // First create the orders_table without the payment_id foreign key constraint
 // First create the orders_table without the payment_id foreign key constraint
 $createOrdersTable = "CREATE TABLE IF NOT EXISTS orders_table (
-    order_id VARCHAR(100) NOT NULL PRIMARY KEY,
-    signupid INT NOT NULL,
-    payment_id VARCHAR(100),
-    total_amount DECIMAL(10, 2) NOT NULL,
-    shipping_address VARCHAR(255) NOT NULL,
-    order_status VARCHAR(50) DEFAULT 'processing',
-    payment_status VARCHAR(50) DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (signupid) REFERENCES signup(signupid) ON DELETE CASCADE
-) ENGINE=InnoDB;";
-$conn->query($createOrdersTable);
+    order_id VARCHAR(100) PRIMARY KEY,
+    user_id INT NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total_amount DECIMAL(10,2) NOT NULL,
+    status ENUM('pending', 'processing', 'completed', 'cancelled') DEFAULT 'pending',
+    payment_status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
+    shipping_address TEXT,
+    FOREIGN KEY (user_id) REFERENCES user_table(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+if (!$conn->query($createOrdersTable)) {
+    echo "Error creating orders table: " . $conn->error . "<br>";
+}
+
+// Add order_date column if it doesn't exist
+$check_order_date = "SHOW COLUMNS FROM orders_table LIKE 'order_date'";
+$result = $conn->query($check_order_date);
+if ($result->num_rows == 0) {
+    $add_order_date = "ALTER TABLE orders_table 
+                       ADD COLUMN order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP";
+    if (!$conn->query($add_order_date)) {
+        echo "Error adding order_date column: " . $conn->error . "<br>";
+    }
+}
 
 // Then create the payment_table with references to orders_table and signup table
 $createPaymentTable = "CREATE TABLE IF NOT EXISTS payment_table (
@@ -506,4 +519,22 @@ if (!$conn->query($add_favorites_index)) {
 
 // Close the connection
 //$conn->close();
+
+// Modify your cart_items table definition to include status in the unique constraint
+$alter_cart_items_constraint = "ALTER TABLE cart_items 
+DROP INDEX unique_cart_product,
+ADD UNIQUE KEY unique_cart_product_status (cart_id, product_id, status)";
+
+// Comment this out after executing it once
+// $conn->query($alter_cart_items_constraint);
+
+// Modify cart_items table to include order_id
+$modify_cart_items = "ALTER TABLE cart_items 
+                     ADD COLUMN IF NOT EXISTS order_id VARCHAR(100),
+                     ADD FOREIGN KEY IF NOT EXISTS (order_id) 
+                     REFERENCES orders_table(order_id)";
+
+if (!$conn->query($modify_cart_items)) {
+    echo "Error modifying cart_items table: " . $conn->error . "<br>";
+}
 ?>

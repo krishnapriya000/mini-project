@@ -84,7 +84,6 @@ $stmt = $conn->prepare($orders_query);
 $stmt->bind_param("i", $signupid);
 $stmt->execute();
 $orders_result = $stmt->get_result();
-
 ?>
 
 <!DOCTYPE html>
@@ -535,7 +534,6 @@ $orders_result = $stmt->get_result();
                             </div>
                             
                             <div class="order-products">
-                                
                                 <?php
                                 // Safely get items from orders_table with proper error checking
                                 $items = [];
@@ -545,9 +543,6 @@ $orders_result = $stmt->get_result();
                                 
                                 if ($items && is_array($items) && !empty($items)) {
                                     foreach ($items as $item) {
-                                        // Improved image path handling
-                                        $imagePath = 'images/placeholder.jpg'; // Default placeholder
-                                        
                                         // Fetch product details including image from product_table
                                         $product_query = "SELECT p.*, pi.image_url 
                                                         FROM product_table p 
@@ -560,28 +555,20 @@ $orders_result = $stmt->get_result();
                                         $product_result = $stmt->get_result();
                                         $product_data = $product_result->fetch_assoc();
                                         
-                                        // Enhanced image path resolution
-                                        if ($product_data && !empty($product_data['image_url'])) {
-                                            $potential_paths = [
-                                                $_SERVER['DOCUMENT_ROOT'] . '/baby/uploads/' . $product_data['image_url'],
-                                                $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $product_data['image_url'],
-                                                'uploads/' . $product_data['image_url'],
-                                                'images/' . $product_data['image_url']
-                                            ];
-
-                                            foreach ($potential_paths as $path) {
-                                                if (file_exists($path)) {
-                                                    $imagePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $path);
-                                                    break;
-                                                }
-                                            }
-                                        }
+                                        // Set a default image path
+                                        $imagePath = 'images/placeholder.jpg';
                                         
-                                        // Sanitize image path
-                                        $imagePath = htmlspecialchars(trim($imagePath));
+                                        // If we have product data with an image URL, use it
+                                        if ($product_data && !empty($product_data['image_url'])) {
+                                            // Try different paths that might work
+                                            $imagePath = 'uploads/' . $product_data['image_url'];
+                                            
+                                            // Log the image path for debugging
+                                            error_log("Attempting to use image path: " . $imagePath);
+                                        }
                                         ?>
                                         <div class="product-item">
-                                            <img src="<?php echo $imagePath; ?>" 
+                                            <img src="<?php echo htmlspecialchars($imagePath); ?>" 
                                                  alt="<?php echo htmlspecialchars($product_data['product_name'] ?? 'Product Image'); ?>"
                                                  onerror="this.onerror=null; this.src='images/placeholder.jpg';"
                                                  style="object-fit: cover; width: 80px; height: 80px;">
@@ -607,9 +594,6 @@ $orders_result = $stmt->get_result();
                                         <i class="fas fa-times-circle"></i> Cancel Order
                                     </a>
                                 <?php endif; ?>
-
-                                    
-
                                 
                                 <?php if ($order['order_status'] == 'delivered'): ?>
                                     <a href="write_review.php?order_id=<?php echo urlencode($order['order_id']); ?>" class="action-btn review-btn">

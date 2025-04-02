@@ -277,7 +277,7 @@ if (!$seller_data) {
             <i class="fas fa-plus"></i>
             Add Product
         </a>
-        <a href="orders.php" class="sidebar-item">
+        <a href="order.php" class="sidebar-item">
             <i class="fas fa-shopping-cart"></i>
             Orders
         </a>

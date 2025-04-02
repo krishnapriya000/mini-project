@@ -13,6 +13,57 @@ if (!isset($_SESSION['seller_id'])) {
 // Get seller_id from session
 $seller_id = $_SESSION['seller_id'];
 
+// Get existing products with stock information
+$stock_query = "SELECT 
+    p.product_id, 
+    p.name, 
+    p.image_url, 
+    p.stock_quantity, 
+    p.price,
+    c.name as category_name,
+    s.subcategory_name
+FROM product_table p
+LEFT JOIN categories_table c ON p.category_id = c.category_id
+LEFT JOIN subcategories s ON p.subcategory_id = s.id
+WHERE p.seller_id = ?
+ORDER BY p.stock_quantity ASC";
+
+// Check if a stock update was submitted
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_stock'])) {
+    $product_id = $_POST['product_id'];
+    $new_stock = $_POST['new_stock'];
+    
+    $update_stock = "UPDATE product_table SET stock_quantity = ? WHERE product_id = ? AND seller_id = ?";
+    $stmt = $conn->prepare($update_stock);
+    $stmt->bind_param("iii", $new_stock, $product_id, $seller_id);
+    
+    if ($stmt->execute()) {
+        echo "<script>alert('Stock updated successfully!');</script>";
+    } else {
+        echo "<script>alert('Error updating stock: " . $stmt->error . "');</script>";
+    }
+}
+
+// Get out of stock and low stock counts
+$out_of_stock_query = "SELECT COUNT(*) as count FROM product_table WHERE seller_id = ? AND stock_quantity = 0";
+$low_stock_query = "SELECT COUNT(*) as count FROM product_table WHERE seller_id = ? AND stock_quantity > 0 AND stock_quantity <= 5";
+
+$stmt = $conn->prepare($out_of_stock_query);
+$stmt->bind_param("i", $seller_id);
+$stmt->execute();
+$out_of_stock_count = $stmt->get_result()->fetch_assoc()['count'];
+
+$stmt = $conn->prepare($low_stock_query);
+$stmt->bind_param("i", $seller_id);
+$stmt->execute();
+$low_stock_count = $stmt->get_result()->fetch_assoc()['count'];
+
+// Get products for stock management table
+$stmt = $conn->prepare($stock_query);
+$stmt->bind_param("i", $seller_id);
+$stmt->execute();
+$stock_result = $stmt->get_result();
+
 // Process form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Validate category_id
@@ -850,6 +901,259 @@ document.getElementById('product_image').addEventListener('change', function(e) 
                 })
                 .catch(error => console.error('Error fetching brands:', error));
         }
+    </script>
+
+    <!-- Add this right before the closing </body> tag -->
+    <div class="stock-management">
+        <h2>Stock Management</h2>
+        
+        <?php if ($out_of_stock_count > 0 || $low_stock_count > 0): ?>
+        <div class="stock-alerts">
+            <?php if ($out_of_stock_count > 0): ?>
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i>
+                <strong>Warning:</strong> <?php echo $out_of_stock_count; ?> products are out of stock!
+            </div>
+            <?php endif; ?>
+            
+            <?php if ($low_stock_count > 0): ?>
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Notice:</strong> <?php echo $low_stock_count; ?> products are running low on stock (5 or fewer items)
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+        
+        <div class="stock-controls">
+            <select id="stockFilter" onchange="filterStock()">
+                <option value="all">All Products</option>
+                <option value="out">Out of Stock</option>
+                <option value="low">Low Stock</option>
+                <option value="good">In Stock</option>
+            </select>
+        </div>
+        
+        <table class="stock-table">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Product Name</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Current Stock</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php while ($product = $stock_result->fetch_assoc()): 
+                    $stock_status = '';
+                    if ($product['stock_quantity'] == 0) {
+                        $stock_status = 'out';
+                    } elseif ($product['stock_quantity'] <= 5) {
+                        $stock_status = 'low';
+                    } else {
+                        $stock_status = 'good';
+                    }
+                ?>
+                    <tr data-stock="<?php echo $stock_status; ?>">
+                        <td>
+                            <img src="<?php echo htmlspecialchars($product['image_url']); ?>" 
+                                 alt="<?php echo htmlspecialchars($product['name']); ?>"
+                                 class="product-image">
+                        </td>
+                        <td><?php echo htmlspecialchars($product['name']); ?></td>
+                        <td>
+                            <?php echo htmlspecialchars($product['category_name']); ?> / 
+                            <?php echo htmlspecialchars($product['subcategory_name']); ?>
+                        </td>
+                        <td>₹<?php echo number_format($product['price'], 2); ?></td>
+                        <td>
+                            <form method="post" class="stock-form">
+                                <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>">
+                                <input type="number" name="new_stock" value="<?php echo $product['stock_quantity']; ?>" 
+                                       min="0" class="stock-input" required>
+                                <button type="submit" name="update_stock" class="update-btn">Update</button>
+                            </form>
+                        </td>
+                        <td>
+                            <span class="stock-status status-<?php echo $stock_status; ?>">
+                                <?php 
+                                    if ($stock_status === 'out') echo 'Out of Stock';
+                                    elseif ($stock_status === 'low') echo 'Low Stock';
+                                    else echo 'In Stock';
+                                ?>
+                            </span>
+                        </td>
+                        <td>
+                            <a href="edit_product.php?id=<?php echo $product['product_id']; ?>" class="edit-btn">Edit</a>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <style>
+    /* Stock Management Styles */
+    .stock-management {
+        margin-top: 30px;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .stock-management h2 {
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .stock-alerts {
+        margin-bottom: 20px;
+    }
+
+    .alert {
+        padding: 12px 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .alert i {
+        font-size: 18px;
+    }
+
+    .alert-danger {
+        background-color: #ffebee;
+        color: #c62828;
+        border: 1px solid #ffcdd2;
+    }
+
+    .alert-warning {
+        background-color: #fff3e0;
+        color: #ef6c00;
+        border: 1px solid #ffe0b2;
+    }
+
+    .stock-controls {
+        margin-bottom: 15px;
+    }
+
+    #stockFilter {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        min-width: 150px;
+    }
+
+    .stock-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .stock-table th,
+    .stock-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .stock-table th {
+        background-color: #f7f7f7;
+        font-weight: bold;
+    }
+
+    .stock-table tr:hover {
+        background-color: #f9f9f9;
+    }
+
+    .product-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+
+    .stock-form {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .stock-input {
+        width: 70px;
+        padding: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .update-btn, .edit-btn {
+        padding: 5px 10px;
+        background-color: #0077cc;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .edit-btn {
+        background-color: #28a745;
+        display: inline-block;
+        text-decoration: none;
+        text-align: center;
+    }
+
+    .stock-status {
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+    .status-out {
+        background-color: #ffebee;
+        color: #c62828;
+    }
+
+    .status-low {
+        background-color: #fff3e0;
+        color: #ef6c00;
+    }
+
+    .status-good {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    /* Highlight out of stock rows */
+    tr[data-stock="out"] {
+        background-color: #fff5f5;
+    }
+
+    tr[data-stock="low"] {
+        background-color: #fff8e1;
+    }
+    </style>
+
+    <script>
+    // Filter stock table by status
+    function filterStock() {
+        const filter = document.getElementById('stockFilter').value;
+        const rows = document.querySelectorAll('.stock-table tbody tr');
+        
+        rows.forEach(row => {
+            if (filter === 'all' || row.dataset.stock === filter) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
     </script>
 </body>
 </html>

@@ -252,294 +252,256 @@ try {
         
         .product-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 30px;
-            padding: 40px;
-            background-color: #f8f9fa;
-            max-width: 1200px;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 25px;
+            padding: 30px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         
         .product-card {
+            position: relative;
             background-color: white;
-            border-radius: 15px;
+            border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         
         .product-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
         }
         
         .product-image {
             position: relative;
-            height: 250px;
-            background-color: #f8f9fa;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            height: 200px;
             overflow: hidden;
         }
         
         .product-image img {
-            max-width: 100%;
-            max-height: 220px;
-            object-fit: contain;
-            transition: transform 0.3s ease;
-            margin: 0 auto;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
         }
         
         .product-card:hover .product-image img {
             transform: scale(1.05);
         }
         
-        .product-info {
-            padding: 20px;
-            text-align: center;
-            background: white;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .product-title {
-            font-weight: 600;
-            font-size: 16px;
-            color: #2c3e50;
-            margin-bottom: 15px;
-            line-height: 1.4;
-            height: 45px;
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            text-align: center;
-        }
-        
-        .product-price {
-            color: #e74c3c;
-            font-weight: 700;
-            font-size: 20px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .discount {
-            color: #27ae60;
-            font-size: 15px;
-            font-weight: 600;
-            margin-left: 8px;
-            background-color: #e8f5e9;
-            padding: 4px 8px;
-            border-radius: 12px;
-            display: inline-block;
-        }
-        
         .like-btn {
             position: absolute;
             top: 10px;
             right: 10px;
-            background: white;
-            border: 2px solid #ff69b4;
-            color: #ff69b4;
-            padding: 8px;
+            background-color: white;
+            border: none;
             border-radius: 50%;
             width: 35px;
             height: 35px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s ease;
-            z-index: 2;
             cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
+            transition: all 0.2s ease;
+        }
+        
+        .like-btn i {
+            font-size: 16px;
+            color: #ccc;
+            transition: all 0.2s ease;
+        }
+        
+        .like-btn.active i {
+            color: #ff5252;
         }
         
         .like-btn:hover {
             transform: scale(1.1);
         }
         
-        .like-btn.active {
-            background: #ff69b4;
-            color: white;
+        .product-info {
+            padding: 15px;
+        }
+        
+        .product-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            height: 40px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        
+        .product-price {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0077cc;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .discount {
+            font-size: 13px;
+            font-weight: normal;
+            color: #ff5252;
         }
         
         .product-buttons {
             display: flex;
+            flex-direction: column;
             gap: 8px;
-            margin-top: 15px;
         }
         
         .cart-buy-buttons {
             display: flex;
-            gap: 8px;
-            width: 100%;
+            gap: 10px;
         }
         
         .action-button {
             flex: 1;
-            padding: 8px 15px;
+            padding: 10px;
             border: none;
-            border-radius: 20px;
+            border-radius: 6px;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 500;
             font-size: 14px;
-            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
+            gap: 6px;
+            transition: all 0.2s ease;
         }
         
         .add-to-cart {
-            background: linear-gradient(135deg, #0077cc, #005fa3);
+            background-color: #0077cc;
             color: white;
         }
         
-        .buy-now {
-            background: linear-gradient(135deg, #00b894, #00a382);
-            color: white;
+        .add-to-cart:hover {
+            background-color: #005fa3;
         }
         
-        .action-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .no-products {
-            text-align: center;
-            padding: 60px 40px;
-            background-color: white;
-            border-radius: 15px;
+        .out-of-stock-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            max-width: 800px;
-            margin: 40px auto;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 5;
         }
         
-        .no-products h3 {
-            font-size: 24px;
-            color: #2c3e50;
-            margin-bottom: 15px;
-            text-align: center;
+        .out-of-stock-text {
+            background-color: #ff5252;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            transform: rotate(-15deg);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
         
-        .no-products p {
-            color: #666;
-            font-size: 16px;
-            line-height: 1.6;
-            text-align: center;
+        .stock-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 5;
         }
         
-        .header {
-            flex-direction: column;
-            gap: 15px;
+        .in-stock {
+            background-color: #4CAF50;
+            color: white;
         }
         
-        @media (min-width: 768px) {
-            .header {
-                flex-direction: row;
-            }
+        .low-stock {
+            background-color: #FFC107;
+            color: #333;
         }
         
-        @media (max-width: 768px) {
-            .header {
-                padding: 15px 20px;
-            }
-            
-            .search-container {
-                margin: 15px auto;
-                width: 90%;
-            }
-            
-            .nav-links {
-                gap: 15px;
-                justify-content: center;
-                width: 100%;
-            }
-            
-            .product-container {
-                padding: 20px;
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                gap: 20px;
-            }
-            
-            .product-image {
-                height: 200px;
-            }
-            
-            .product-title {
-                font-size: 14px;
-                height: 40px;
-            }
+        .out-of-stock {
+            background-color: #F44336;
+            color: white;
         }
         
-        @media (max-width: 480px) {
-            .logo {
-                font-size: 24px;
-                text-align: center;
-                width: 100%;
-            }
-            
-            .search-container input {
-                padding: 10px 15px;
-            }
-            
-            .search-btn {
-                padding: 10px 20px;
-            }
-            
-            .icon-btn {
-                font-size: 20px;
-            }
-            
-            .user-icon {
-                width: 35px;
-                height: 35px;
-            }
+        .unavailable-button {
+            background-color: #e0e0e0;
+            color: #9e9e9e;
+            cursor: not-allowed;
         }
         
-        /* Modal styles for the message */
+        /* Grayscale filter for out of stock products */
+        .product-card.out-of-stock img {
+            filter: grayscale(100%);
+        }
+        
+        /* Existing modal styles */
         .modal {
             display: none;
             position: fixed;
-            z-index: 2000;
+            z-index: 1000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
         }
         
         .modal-content {
-            background-color: #fefefe;
+            background-color: white;
             margin: 15% auto;
             padding: 20px;
-            border-radius: 10px;
-            width: 80%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            border-radius: 5px;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
         }
         
         .close-btn {
-            color: #aaa;
-            float: right;
+            position: absolute;
+            right: 20px;
+            top: 10px;
             font-size: 28px;
             font-weight: bold;
             cursor: pointer;
         }
         
-        .close-btn:hover {
-            color: black;
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .product-container {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                padding: 15px;
+            }
+            
+            .header {
+                padding: 15px;
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .search-container {
+                width: 100%;
+            }
+            
+            .nav-links {
+                width: 100%;
+                justify-content: space-around;
+            }
         }
     </style>
 </head>
@@ -612,14 +574,45 @@ try {
             while ($row = $result->fetch_assoc()) { 
                 $discount_percentage = rand(10, 60);
                 $original_price = $row['price'];
+                $stock_status = '';
+                $is_out_of_stock = false;
+                
+                // Check stock status
+                if (isset($row['stock_quantity'])) {
+                    if ($row['stock_quantity'] <= 0) {
+                        $stock_status = 'out-of-stock';
+                        $is_out_of_stock = true;
+                    } elseif ($row['stock_quantity'] <= 5) {
+                        $stock_status = 'low-stock';
+                    } else {
+                        $stock_status = 'in-stock';
+                    }
+                }
                 ?>
                 
-                <div class="product-card">
+                <div class="product-card <?php echo $is_out_of_stock ? 'out-of-stock' : ''; ?>">
                     <div class="product-image">
                         <button class="like-btn <?php echo in_array($row['product_id'], $favorited_products) ? 'active' : ''; ?>" 
                                 onclick="toggleLike(this, <?php echo $row['product_id']; ?>)">
                             <i class="fas fa-heart"></i>
                         </button>
+                        
+                        <?php if ($stock_status): ?>
+                        <div class="stock-badge <?php echo $stock_status; ?>">
+                            <?php 
+                                if ($stock_status === 'out-of-stock') echo 'Out of Stock';
+                                elseif ($stock_status === 'low-stock') echo 'Low Stock';
+                                else echo 'In Stock';
+                            ?>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($is_out_of_stock): ?>
+                        <div class="out-of-stock-overlay">
+                            <div class="out-of-stock-text">OUT OF STOCK</div>
+                        </div>
+                        <?php endif; ?>
+                        
                         <a href="product_details.php?id=<?php echo $row['product_id']; ?>">
                             <?php if (!empty($row['image_url'])): ?>
                                 <img src="<?php echo htmlspecialchars($row['image_url']); ?>" 
@@ -642,6 +635,7 @@ try {
                         <div class="product-buttons">
                             <div class="cart-buy-buttons">
                                 <?php if ($user_type === 'user'): ?>
+                                    <?php if (!$is_out_of_stock): ?>
                                     <form action="cart.php" method="POST" style="flex: 1;">
                                         <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
                                         <input type="hidden" name="quantity" value="1">
@@ -649,6 +643,11 @@ try {
                                             <i class="fas fa-shopping-cart"></i> Add to Cart
                                         </button>
                                     </form>
+                                    <?php else: ?>
+                                        <button type="button" class="action-button unavailable-button" disabled>
+                                            <i class="fas fa-shopping-cart"></i> Out of Stock
+                                        </button>
+                                    <?php endif; ?>
                                 <?php else: ?>
                                     <button type="button" class="action-button add-to-cart" onclick="showUserOnlyMessage()">
                                         <i class="fas fa-shopping-cart"></i> Add to Cart
@@ -720,7 +719,7 @@ try {
                 if (data.error) {
                     throw new Error(data.error);
                 }
-                button.classList.toggle('active');
+            button.classList.toggle('active');
             })
             .catch(error => {
                 console.error('Error:', error);

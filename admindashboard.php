@@ -395,6 +395,7 @@ $sellersResult = mysqli_query($conn, "SELECT * FROM seller");
                             <th>Business Name</th>
                             <th>Status</th>
                             <th>Actions</th>
+                            <th>Details</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -412,6 +413,11 @@ $sellersResult = mysqli_query($conn, "SELECT * FROM seller");
                                             <button class="btn btn-reject" name="action" value="deactivate_seller">Deactivate</button>
                                         <?php } ?>
                                     </form>
+                                </td>
+                                <td>
+                                    <button class="btn btn-view" onclick="window.location.href='seller_report.php?seller_id=<?php echo $seller['seller_id']; ?>'">
+                                        View Details
+                                    </button>
                                 </td>
                             </tr>
                         <?php } ?>

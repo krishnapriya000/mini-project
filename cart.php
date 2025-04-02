@@ -50,8 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id']) && isse
         $quantity = 1; // Ensure minimum quantity is 1
     }
     
-    // Get product information
-    $product_query = "SELECT p.*, c.category_id, s.id as subcategory_id, p.price 
+    // Get product information with stock check
+    $product_query = "SELECT p.*, c.category_id, s.id as subcategory_id, p.price, p.stock_quantity 
                      FROM product_table p
                      JOIN categories_table c ON p.category_id = c.category_id
                      JOIN subcategories s ON p.subcategory_id = s.id
@@ -65,64 +65,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id']) && isse
     if ($product_result && $product_result->num_rows > 0) {
         $product = $product_result->fetch_assoc();
         
-        // Check if user already has an active cart
-        $cart_check_query = "SELECT cart_id FROM cart_table 
-                            WHERE signupid = ? AND status = 'active' 
-                            LIMIT 1";
-        
-        $stmt = $conn->prepare($cart_check_query);
-        $stmt->bind_param("i", $signupid);
-        $stmt->execute();
-        $cart_result = $stmt->get_result();
-        
-        // If cart doesn't exist, create one
-        if ($cart_result->num_rows === 0) {
-            $create_cart_query = "INSERT INTO cart_table (signupid) VALUES (?)";
-            $stmt = $conn->prepare($create_cart_query);
+        // Check if product is in stock
+        if ($product['stock_quantity'] <= 0) {
+            $error = "Sorry, this product is out of stock!";
+        } 
+        // Check if requested quantity is available
+        elseif ($quantity > $product['stock_quantity']) {
+            $error = "Sorry, only " . $product['stock_quantity'] . " items are available in stock!";
+            $quantity = $product['stock_quantity']; // Set to max available
+        } 
+        else {
+            // Check if user already has an active cart
+            $cart_check_query = "SELECT cart_id FROM cart_table 
+                                WHERE signupid = ? AND status = 'active' 
+                                LIMIT 1";
+            
+            $stmt = $conn->prepare($cart_check_query);
             $stmt->bind_param("i", $signupid);
             $stmt->execute();
-            $cart_id = $conn->insert_id;
-        } else {
-            $cart_row = $cart_result->fetch_assoc();
-            $cart_id = $cart_row['cart_id'];
-        }
-        
-        // Check if product already exists in cart
-        $check_item_query = "SELECT cart_item_id, quantity FROM cart_items 
-                            WHERE cart_id = ? AND product_id = ? 
-                            LIMIT 1";
-        
-        $stmt = $conn->prepare($check_item_query);
-        $stmt->bind_param("ii", $cart_id, $product_id);
-        $stmt->execute();
-        $item_result = $stmt->get_result();
-        
-        if ($item_result->num_rows > 0) {
-            // Update quantity if product already in cart
-            $item_row = $item_result->fetch_assoc();
-            $new_quantity = $item_row['quantity'] + $quantity;
+            $cart_result = $stmt->get_result();
             
-            $update_query = "UPDATE cart_items SET quantity = ? WHERE cart_item_id = ?";
-            $stmt = $conn->prepare($update_query);
-            $stmt->bind_param("ii", $new_quantity, $item_row['cart_item_id']);
-            $stmt->execute();
-            
-            $message = "Cart updated successfully!";
-        } else {
-            // Add new product to cart
-            $add_query = "INSERT INTO cart_items 
-                         (cart_id, signupid, product_id, category_id, subcategory_id, quantity, price) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?)";
-            
-            $stmt = $conn->prepare($add_query);
-            $stmt->bind_param("iiiiids", $cart_id, $signupid, $product_id, 
-                             $product['category_id'], $product['subcategory_id'], 
-                             $quantity, $product['price']);
-            
-            if ($stmt->execute()) {
-                $message = "Product added to cart successfully!";
+            // If cart doesn't exist, create one
+            if ($cart_result->num_rows === 0) {
+                $create_cart_query = "INSERT INTO cart_table (signupid, status) VALUES (?, 'active')";
+                $stmt = $conn->prepare($create_cart_query);
+                $stmt->bind_param("i", $signupid);
+                $stmt->execute();
+                $cart_id = $conn->insert_id;
             } else {
-                $error = "Error adding product to cart: " . $stmt->error;
+                $cart_row = $cart_result->fetch_assoc();
+                $cart_id = $cart_row['cart_id'];
+            }
+            
+            // Check if product already exists in cart
+            $check_item_query = "SELECT cart_item_id, quantity, status FROM cart_items 
+                                WHERE cart_id = ? AND product_id = ?
+                                LIMIT 1";
+            
+            $stmt = $conn->prepare($check_item_query);
+            $stmt->bind_param("ii", $cart_id, $product_id);
+            $stmt->execute();
+            $item_result = $stmt->get_result();
+            
+            if ($item_result->num_rows > 0) {
+                // Item exists in cart, might be active or inactive
+                $item_row = $item_result->fetch_assoc();
+                
+                if ($item_row['status'] === 'active') {
+                    // If active, update quantity
+                    $new_quantity = $item_row['quantity'] + $quantity;
+                    
+                    // Check again if new total quantity exceeds available stock
+                    if ($new_quantity > $product['stock_quantity']) {
+                        $new_quantity = $product['stock_quantity'];
+                        $message = "Cart updated to maximum available quantity!";
+                    } else {
+                        $message = "Cart updated successfully!";
+                    }
+                    
+                    $update_query = "UPDATE cart_items SET quantity = ? WHERE cart_item_id = ?";
+                    $stmt = $conn->prepare($update_query);
+                    $stmt->bind_param("ii", $new_quantity, $item_row['cart_item_id']);
+                    $stmt->execute();
+                } else {
+                    // If inactive, reactivate it and set new quantity
+                    $update_query = "UPDATE cart_items SET status = 'active', quantity = ? WHERE cart_item_id = ?";
+                    $stmt = $conn->prepare($update_query);
+                    $stmt->bind_param("ii", $quantity, $item_row['cart_item_id']);
+                    $stmt->execute();
+                    $message = "Product added to cart successfully!";
+                }
+            } else {
+                // Add new product to cart
+                try {
+                    $add_query = "INSERT INTO cart_items 
+                                 (cart_id, signupid, product_id, category_id, subcategory_id, quantity, price, status) 
+                                 VALUES (?, ?, ?, ?, ?, ?, ?, 'active')";
+                    
+                    $stmt = $conn->prepare($add_query);
+                    $stmt->bind_param("iiiidsd", $cart_id, $signupid, $product_id, 
+                                     $product['category_id'], $product['subcategory_id'], 
+                                     $quantity, $product['price']);
+                    
+                    if ($stmt->execute()) {
+                        $message = "Product added to cart successfully!";
+                    } else {
+                        $error = "Error adding product to cart: " . $stmt->error;
+                        error_log("Cart error: " . $stmt->error . " for Product ID: " . $product_id);
+                    }
+                } catch (Exception $e) {
+                    // Handle duplicate entry error
+                    if ($e->getCode() == 1062) { // MySQL error code for duplicate entry
+                        // Try to update the existing item instead
+                        $update_query = "UPDATE cart_items SET status = 'active', quantity = ? 
+                                       WHERE cart_id = ? AND product_id = ?";
+                        $stmt = $conn->prepare($update_query);
+                        $stmt->bind_param("iii", $quantity, $cart_id, $product_id);
+                        $stmt->execute();
+                        $message = "Product added to cart successfully!";
+                    } else {
+                        $error = "Error adding product to cart: " . $e->getMessage();
+                        error_log("Cart error: " . $e->getMessage() . " for Product ID: " . $product_id);
+                    }
+                }
             }
         }
     } else {
@@ -131,7 +176,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id']) && isse
 }
 
 // Get cart items
-$cart_items_query = "SELECT ci.*, p.name, p.image_url, p.price, c.name AS category_name, s.subcategory_name
+$cart_items_query = "SELECT ci.*, p.name, p.image_url, p.price, p.stock_quantity, 
+                    c.name AS category_name, s.subcategory_name
                     FROM cart_items ci
                     JOIN product_table p ON ci.product_id = p.product_id
                     JOIN categories_table c ON ci.category_id = c.category_id
@@ -339,6 +385,12 @@ $subtotal = 0;
             color: #e74c3c;
             font-weight: 700;
             font-size: 18px;
+        }
+        
+        .item-stock {
+            color: #777;
+            font-size: 14px;
+            margin-bottom: 8px;
         }
         
         .item-actions {
@@ -554,6 +606,21 @@ $subtotal = 0;
             <div class="cart-error"><?php echo $error; ?></div>
         <?php endif; ?>
         
+        <?php if(isset($_SESSION['debug']) && $_SESSION['debug']): ?>
+            <div class="debug-info" style="background: #f8f9fa; padding: 15px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 5px;">
+                <h3>Debug Information</h3>
+                <p>User ID: <?php echo $user_id; ?></p>
+                <p>Signup ID: <?php echo $signupid; ?></p>
+                <p>Number of cart items: <?php echo $cart_items->num_rows; ?></p>
+                <?php 
+                // Display any SQL errors
+                if ($conn->error) {
+                    echo "<p>Last SQL Error: " . $conn->error . "</p>";
+                }
+                ?>
+            </div>
+        <?php endif; ?>
+        
         <?php if($cart_items && $cart_items->num_rows > 0): ?>
             <div class="cart-flex">
                 <div class="cart-items-container">
@@ -574,6 +641,17 @@ $subtotal = 0;
                                         <?php echo htmlspecialchars($item['subcategory_name']); ?>
                                     </div>
                                     <div class="item-price">₹<?php echo number_format($item['price'], 2); ?></div>
+                                    <div class="item-stock">
+                                        <?php 
+                                        if ($item['stock_quantity'] <= 0) {
+                                            echo '<span style="color: #e74c3c;">Out of Stock</span>';
+                                        } elseif ($item['stock_quantity'] < $item['quantity']) {
+                                            echo '<span style="color: #e67e22;">Only ' . $item['stock_quantity'] . ' available</span>';
+                                        } else {
+                                            echo '<span style="color: #27ae60;">In Stock</span>';
+                                        }
+                                        ?>
+                                    </div>
                                 </div>
                                 
                                 <div class="item-actions">
@@ -653,5 +731,26 @@ $subtotal = 0;
             </div>
         <?php endif; ?>
     </div>
+
+    <script>
+    // Add this at the end of your script section
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check for item stock issues
+        const cartItems = document.querySelectorAll('.cart-item');
+        cartItems.forEach(item => {
+            const stockElement = item.querySelector('.item-stock span');
+            if (stockElement && stockElement.style.color === 'rgb(231, 76, 60)') { // Out of stock color
+                item.style.opacity = '0.6';
+                const quantityControls = item.querySelector('.quantity-control');
+                if (quantityControls) {
+                    const buttons = quantityControls.querySelectorAll('button');
+                    buttons.forEach(button => {
+                        button.disabled = true;
+                    });
+                }
+            }
+        });
+    });
+    </script>
 </body>
 </html>
