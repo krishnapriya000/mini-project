@@ -119,7 +119,13 @@ $cart_items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             margin: 0 auto;
         }
         
-        h1, h2, h3 {
+        h1 {
+            font-size: 20px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        
+        h2, h3 {
             margin-top: 20px;
             margin-bottom: 10px;
         }
@@ -164,6 +170,37 @@ $cart_items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             border-radius: 3px;
             font-size: 12px;
         }
+
+        /* Button styles */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-buttons button, 
+        .action-buttons a {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .print-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .receipt-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .dashboard-btn {
+            background-color: #555;
+            color: white;
+        }
         
         /* PDF specific rules */
         @media print {
@@ -197,10 +234,11 @@ $cart_items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 <body>
     <div class="container">
         <div class="header">
-            <h1>User Report: <?php echo htmlspecialchars($user['username']); ?></h1>
-            <div class="no-print">
-                <button onclick="window.print()">Print Report</button>
-                <a href="admindashboard.php">Back to Dashboard</a>
+            <h1>User: <?php echo htmlspecialchars($user['username']); ?></h1>
+            <div class="no-print action-buttons">
+                <button onclick="window.print()" class="print-btn">Print Report</button>
+                <button onclick="printReceipt()" class="receipt-btn">Print Receipt</button>
+                <a href="admindashboard.php" class="dashboard-btn">Back to Dashboard</a>
             </div>
         </div>
 
@@ -306,5 +344,34 @@ $cart_items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             <?php endif; ?>
         </div>
     </div>
+
+
+    <script>
+        function printReceipt() {
+            // You can customize this for receipt-specific printing
+            let originalTitle = document.title;
+            document.title = "Receipt for <?php echo htmlspecialchars($user['username']); ?>";
+            
+            // Optionally hide some sections for receipt printing
+            let sections = document.querySelectorAll('.section');
+            sections.forEach((section, index) => {
+                if (index > 1) { // Hide all sections except first two (user info and purchase summary)
+                    section.style.display = 'none';
+                }
+            });
+            
+            window.print();
+            
+            // Restore after printing
+            setTimeout(() => {
+                document.title = originalTitle;
+                sections.forEach(section => {
+                    section.style.display = 'block';
+                });
+            }, 500);
+        }
+    </script>
 </body>
+
+
 </html>
