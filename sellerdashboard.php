@@ -277,10 +277,7 @@ if (!$seller_data) {
             <i class="fas fa-plus"></i>
             Add Product
         </a>
-        <a href="order.php" class="sidebar-item">
-            <i class="fas fa-shopping-cart"></i>
-            Orders
-        </a>
+       
         <a href="earnings.php" class="sidebar-item">
             <i class="fas fa-dollar-sign"></i>
             Earnings

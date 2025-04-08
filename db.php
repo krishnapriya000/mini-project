@@ -494,6 +494,26 @@ if ($result->num_rows == 0) {
 }
 
 
+// Create order_items table
+$order_items_table = "CREATE TABLE IF NOT EXISTS order_items (
+    order_item_id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id VARCHAR(100) NOT NULL,
+    product_id INT NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    quantity INT NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders_table(order_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES product_table(product_id) ON DELETE RESTRICT
+)";
+
+if ($conn->query($order_items_table) === TRUE) {
+    //echo "Order items table created successfully<br>";
+} else {
+    echo "Error creating order items table: " . $conn->error . "<br>";
+}
+
 // Add this code to your db.php file, preferably near other user-related tables
 
 // Create user_favorites table
