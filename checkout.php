@@ -2,6 +2,197 @@
 session_start();
 require_once($_SERVER['DOCUMENT_ROOT'] . '/baby/connect.php');
 
+// Ensure database connection is established
+if (!$conn) {
+    die("Database connection failed: " . mysqli_connect_error());
+}
+
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// Get the user's signup ID based on user_id
+$user_id = $_SESSION['user_id'];
+$get_signupid_query = "SELECT signupid FROM user_table WHERE user_id = ?";
+$stmt = $conn->prepare($get_signupid_query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result && $result->num_rows > 0) {
+    $user_data = $result->fetch_assoc();
+    $signupid = $user_data['signupid'];
+} else {
+    // If we can't find the signupid, use alternatives
+    $signupid = isset($_SESSION['signupid']) ? $_SESSION['signupid'] : $user_id;
+}
+
+// Process checkout form when submitted
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout'])) {
+    // Start transaction for stock management and order processing
+    $conn->begin_transaction();
+    
+    try {
+        // Get cart items and verify stock one last time
+        $get_cart_items = "SELECT ci.product_id, ci.quantity, p.stock_quantity, p.name, ci.cart_id
+                          FROM cart_items ci
+                          JOIN product_table p ON ci.product_id = p.product_id
+                          WHERE ci.signupid = ? AND ci.status = 'active'";
+        
+        $stmt = $conn->prepare($get_cart_items);
+        $stmt->bind_param("i", $signupid);
+        $stmt->execute();
+        $cart_items = $stmt->get_result();
+        
+        $stock_issue = false;
+        $out_of_stock_items = [];
+        $cart_id = null;
+        
+        // Verify all products are in stock with requested quantity
+        while ($item = $cart_items->fetch_assoc()) {
+            if ($item['quantity'] > $item['stock_quantity']) {
+                $stock_issue = true;
+                $out_of_stock_items[] = $item['name'];
+            }
+            
+            // Get cart_id (will be the same for all items)
+            if (!$cart_id) {
+                $cart_id = $item['cart_id'];
+            }
+        }
+        
+        if ($stock_issue) {
+            throw new Exception("Some items in your cart are no longer available in the requested quantity: " . 
+                               implode(", ", $out_of_stock_items));
+        }
+        
+        // Extract form data for shipping & payment
+        $name = $_POST['name'];
+        $email = $_POST['email'];
+        $phone = $_POST['phone'];
+        $address = $_POST['address'];
+        $city = $_POST['city'];
+        $state = $_POST['state'];
+        $postal_code = $_POST['postal_code'];
+        $payment_method = $_POST['payment_method'];
+        
+        // Calculate order total
+        $total_query = "SELECT SUM(ci.quantity * ci.price) as total
+                        FROM cart_items ci
+                        WHERE ci.signupid = ? AND ci.status = 'active'";
+        
+        $stmt = $conn->prepare($total_query);
+        $stmt->bind_param("i", $signupid);
+        $stmt->execute();
+        $total_result = $stmt->get_result()->fetch_assoc();
+        $total_amount = $total_result['total'];
+        
+        // Add shipping fee if needed
+        if ($total_amount < 1000) {
+            $total_amount += 100; // Add shipping fee for orders under 1000
+        }
+        
+        // Add tax (5%)
+        $tax_amount = $total_amount * 0.05;
+        $total_amount += $tax_amount;
+        
+        // Generate unique order ID
+        $order_id = 'ORD' . time() . rand(100, 999);
+        
+        // Create the order
+        $create_order = "INSERT INTO orders_table (order_id, signupid, fullname, email, phone, 
+                         shipping_address, payment_id, total_amount, order_status, payment_status) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'processing', ?)";
+        
+        $payment_id = 'PAY' . time() . rand(100, 999);
+        $payment_status = ($payment_method == 'cod') ? 'pending' : 'paid';
+        
+        $stmt = $conn->prepare($create_order);
+        $stmt->bind_param("sssssssds", $order_id, $signupid, $name, $email, $phone, 
+                         $address, $payment_id, $total_amount, $payment_status);
+        $stmt->execute();
+        
+        // Reset cart items result to iterate again
+        $stmt = $conn->prepare($get_cart_items);
+        $stmt->bind_param("i", $signupid);
+        $stmt->execute();
+        $cart_items = $stmt->get_result();
+        
+        // Update inventory for each product - THIS IS THE CRITICAL PART
+        $update_inventory = "UPDATE product_table 
+                            SET stock_quantity = stock_quantity - ? 
+                            WHERE product_id = ?";
+        
+        while ($item = $cart_items->fetch_assoc()) {
+            // Decrement stock for each product based on purchase quantity
+            $stmt = $conn->prepare($update_inventory);
+            $stmt->bind_param("ii", $item['quantity'], $item['product_id']);
+            $stmt->execute();
+            
+            // Verify the update actually happened
+            if ($stmt->affected_rows <= 0) {
+                error_log("Failed to update inventory for product ID: " . $item['product_id']);
+                throw new Exception("System error: Unable to update inventory");
+            }
+        }
+        
+        // Update cart items to link to order and mark as processed
+        $update_cart_items = "UPDATE cart_items 
+                             SET order_id = ?, status = 'disabled' 
+                             WHERE signupid = ? AND status = 'active'";
+        
+        $stmt = $conn->prepare($update_cart_items);
+        $stmt->bind_param("si", $order_id, $signupid);
+        $stmt->execute();
+        
+        // Update cart status
+        $update_cart = "UPDATE cart_table 
+                       SET status = 'completed' 
+                       WHERE cart_id = ? AND signupid = ? AND status = 'active'";
+        
+        $stmt = $conn->prepare($update_cart);
+        $stmt->bind_param("ii", $cart_id, $signupid);
+        $stmt->execute();
+        
+        // Commit the transaction
+        $conn->commit();
+        
+        // Redirect to order confirmation page
+        $_SESSION['order_success'] = true;
+        $_SESSION['order_id'] = $order_id;
+        header("Location: order_confirmation.php");
+        exit();
+        
+    } catch (Exception $e) {
+        // Rollback the transaction on error
+        $conn->rollback();
+        
+        // Display error message
+        $_SESSION['checkout_error'] = $e->getMessage();
+        header("Location: cart.php");
+        exit();
+    }
+}
+
+// Get cart items to display on checkout page
+$cart_items_query = "SELECT ci.*, p.name, p.image_url, p.price, p.stock_quantity
+                    FROM cart_items ci
+                    JOIN product_table p ON ci.product_id = p.product_id
+                    JOIN cart_table ct ON ci.cart_id = ct.cart_id
+                    WHERE ci.signupid = ? AND ct.status = 'active' 
+                    AND ci.status = 'active'";
+
+$stmt = $conn->prepare($cart_items_query);
+$stmt->bind_param("i", $signupid);
+$stmt->execute();
+$cart_items = $stmt->get_result();
+
+// Calculate cart totals
+$total_items = 0;
+$subtotal = 0;
+
 // Ensure user is logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");

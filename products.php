@@ -397,11 +397,23 @@ $result = $stmt->get_result();
                     </div>
                     <div class="product-price">₹<?php echo number_format($row['price'], 2); ?></div>
                     <div class="product-stock">
-                        <span>Stock: <?php echo $row['stock_quantity']; ?> units</span>
+                        <span>
+                            <?php 
+                            // Add visual indicator for stock levels
+                            if ($row['stock_quantity'] <= 0) {
+                                echo '<span style="color: #e74c3c; font-weight: bold;"><i class="fas fa-exclamation-circle"></i> Out of Stock</span>';
+                            } elseif ($row['stock_quantity'] <= 5) {
+                                echo '<span style="color: #e67e22; font-weight: bold;"><i class="fas fa-exclamation-triangle"></i> Low Stock: ' . $row['stock_quantity'] . ' units</span>';
+                            } else {
+                                echo '<span style="color: #27ae60;"><i class="fas fa-check-circle"></i> In Stock: ' . $row['stock_quantity'] . ' units</span>';
+                            }
+                            ?>
+                        </span>
                         <span>Brand: <?php echo htmlspecialchars($row['brand']); ?></span>
                     </div>
                     <div class="product-actions">
                         <a href="edit_product.php?id=<?php echo $row['product_id']; ?>" class="btn btn-success"><i class="fas fa-edit"></i> Edit</a>
+                        <a href="update_stock.php?id=<?php echo $row['product_id']; ?>" class="btn btn-primary"><i class="fas fa-boxes"></i> Update Stock</a>
                         <a href="#" class="btn btn-danger delete-btn" data-id="<?php echo $row['product_id']; ?>" data-name="<?php echo htmlspecialchars($row['name']); ?>"><i class="fas fa-trash"></i> Delete</a>
                     </div>
                 </div>

@@ -659,7 +659,17 @@ $related_result = $stmt->get_result();
                     </div>
                     <div class="meta-item">
                         <div class="meta-label">Stock:</div>
-                        <div class="meta-value"><?php echo $product['stock_quantity'] > 0 ? 'In Stock (' . $product['stock_quantity'] . ' available)' : 'Out of Stock'; ?></div>
+                        <div class="meta-value">
+                            <?php 
+                            if ($product['stock_quantity'] <= 0) {
+                                echo '<span style="color: #e74c3c; font-weight: bold;"><i class="fas fa-times-circle"></i> Out of Stock</span>';
+                            } elseif ($product['stock_quantity'] <= 5) {
+                                echo '<span style="color: #e67e22; font-weight: bold;"><i class="fas fa-exclamation-triangle"></i> Low Stock: ' . $product['stock_quantity'] . ' available</span>';
+                            } else {
+                                echo '<span style="color: #27ae60;"><i class="fas fa-check-circle"></i> In Stock (' . $product['stock_quantity'] . ' available)</span>';
+                            }
+                            ?>
+                        </div>
                     </div>
                     <div class="meta-item">
                         <div class="meta-label">Seller:</div>
@@ -677,8 +687,9 @@ $related_result = $stmt->get_result();
                     
                     <div class="action-buttons">
                         <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>">
-                        <button type="submit" class="add-to-cart-btn">
-                            <i class="fas fa-shopping-cart"></i> Add to Cart
+                        <button type="submit" class="add-to-cart-btn" <?php echo ($product['stock_quantity'] <= 0) ? 'disabled' : ''; ?>>
+                            <i class="fas fa-shopping-cart"></i> 
+                            <?php echo ($product['stock_quantity'] <= 0) ? 'Out of Stock' : 'Add to Cart'; ?>
                         </button>
                         <div class="wishlist-btn">
                             <i class="far fa-heart"></i>

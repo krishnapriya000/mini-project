@@ -10,56 +10,73 @@ if (!isset($_SESSION['seller_id'])) {
 
 $seller_id = $_SESSION['seller_id'];
 
-// Get detailed order statistics
-$stats_query = "SELECT 
-    COUNT(DISTINCT o.order_id) as total_orders,
-    SUM(ci.quantity) as total_items_sold,
-    SUM(ci.quantity * ci.price) as total_revenue,
-    COUNT(DISTINCT CASE WHEN o.order_status = 'processing' THEN o.order_id END) as pending_orders,
-    COUNT(DISTINCT CASE WHEN o.order_status = 'completed' THEN o.order_id END) as completed_orders,
-    COUNT(DISTINCT CASE WHEN o.order_status = 'cancelled' THEN o.order_id END) as cancelled_orders,
-    COUNT(DISTINCT s.signupid) as unique_customers
-FROM product_table p
-LEFT JOIN cart_items ci ON p.product_id = ci.product_id
-LEFT JOIN orders_table o ON ci.order_id = o.order_id
-LEFT JOIN signup s ON o.signupid = s.signupid
-WHERE p.seller_id = ?";
-
-$stmt = $conn->prepare($stats_query);
-$stmt->bind_param("i", $seller_id);
-$stmt->execute();
-$stats = $stmt->get_result()->fetch_assoc();
-
-// Get seller's orders with detailed information
-$orders_query = "SELECT 
-    o.order_id,
-    o.created_at,
-    o.order_status,
-    o.shipping_address,
-    o.payment_status,
-    p.name as product_name,
-    p.image_url,
-    p.price,
-    ci.quantity,
-    (ci.quantity * ci.price) as subtotal,
-    s.username as customer_name,
-    s.email as customer_email,
-    s.phone as customer_phone,
-    c.name as category_name,
-    sub.subcategory_name
-FROM product_table p
-JOIN cart_items ci ON p.product_id = ci.product_id
-JOIN orders_table o ON ci.order_id = o.order_id
-JOIN signup s ON o.signupid = s.signupid
-LEFT JOIN categories_table c ON p.category_id = c.category_id
-LEFT JOIN subcategories sub ON p.subcategory_id = sub.id
-WHERE p.seller_id = ?
-ORDER BY o.created_at DESC";
+// Get orders for this seller by joining orders_table, cart_items, product_table
+$orders_query = "
+    SELECT DISTINCT o.order_id, 
+           o.created_at,
+           o.order_status, 
+           o.payment_status,
+           o.shipping_address,
+           o.total_amount,
+           s.username as customer_name,
+           s.email as customer_email,
+           s.phone as customer_phone
+    FROM orders_table o
+    JOIN cart_items ci ON o.order_id = ci.order_id
+    JOIN product_table p ON ci.product_id = p.product_id
+    JOIN signup s ON o.signupid = s.signupid
+    WHERE p.seller_id = ?
+    ORDER BY o.created_at DESC";
 
 $stmt = $conn->prepare($orders_query);
 $stmt->bind_param("i", $seller_id);
 $stmt->execute();
-$orders = $stmt->get_result();
+$orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Get all order items for the orders
+$items_query = "
+    SELECT ci.order_id,
+           p.name as product_name,
+           p.image_url as product_image,
+           ci.quantity,
+           ci.price as sold_price,
+           (ci.quantity * ci.price) as subtotal
+    FROM cart_items ci
+    JOIN product_table p ON ci.product_id = p.product_id
+    WHERE p.seller_id = ? AND ci.order_id IN (
+        SELECT DISTINCT o.order_id
+        FROM orders_table o
+        JOIN cart_items ci2 ON o.order_id = ci2.order_id
+        JOIN product_table p2 ON ci2.product_id = p2.product_id
+        WHERE p2.seller_id = ?
+    )";
+
+$stmt = $conn->prepare($items_query);
+$stmt->bind_param("ii", $seller_id, $seller_id);
+$stmt->execute();
+$all_items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Organize items by order_id for easy access
+$order_items = [];
+foreach ($all_items as $item) {
+    $order_items[$item['order_id']][] = $item;
+}
+
+// Process order status update if requested
+if (isset($_POST['mark_completed']) && isset($_POST['order_id'])) {
+    $order_id = $_POST['order_id'];
+    
+    $update_query = "UPDATE orders_table SET order_status = 'completed' WHERE order_id = ?";
+    $stmt = $conn->prepare($update_query);
+    $stmt->bind_param("s", $order_id);
+    
+    if ($stmt->execute()) {
+        header("Location: order.php?success=order_completed");
+        exit;
+    } else {
+        $error_message = "Failed to update order status";
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -70,203 +87,400 @@ $orders = $stmt->get_result();
     <title>Order Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Previous styles remain the same */
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
         }
 
-        .stat-card {
-            background: linear-gradient(145deg, rgb(179, 69, 10), rgb(199, 89, 30));
-            color: white;
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
             padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            transition: transform 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-card i {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        .order-filters {
+        .page-header {
             display: flex;
-            gap: 15px;
+            align-items: center;
             margin-bottom: 20px;
-            flex-wrap: wrap;
         }
 
-        .filter-select {
-            padding: 8px 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background: white;
+        .page-header i {
+            font-size: 28px;
+            color: #b8451f;
+            margin-right: 15px;
         }
 
-        .payment-badge {
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: 500;
+        .page-title {
+            font-size: 28px;
+            color: #333;
+            margin: 0;
         }
 
-        .payment-pending { background: #fff3cd; color: #856404; }
-        .payment-completed { background: #d4edda; color: #155724; }
-        .payment-failed { background: #f8d7da; color: #721c24; }
-
-        .category-tag {
-            display: inline-block;
-            padding: 3px 8px;
+        .order-count {
             background: #e9ecef;
-            border-radius: 12px;
-            font-size: 11px;
-            color: #495057;
-            margin-top: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #666;
+            margin-left: 15px;
+        }
+
+        .orders-container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-top: 5px solid #b8451f;
+            margin-bottom: 30px;
         }
 
         .no-orders {
             text-align: center;
-            padding: 40px;
-            color: #666;
+            padding: 60px 0;
         }
 
         .no-orders i {
-            font-size: 48px;
+            font-size: 80px;
             color: #ddd;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .no-orders h3 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .no-orders p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .order-card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+
+        .order-id {
+            font-family: monospace;
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .order-date {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .status-processing { background: #fff3cd; color: #856404; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-cancelled { background: #f8d7da; color: #721c24; }
+        .status-pending { background: #cce5ff; color: #004085; }
+
+        .order-body {
+            padding: 20px;
+        }
+
+        .customer-info {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 30px;
+        }
+
+        .info-column {
+            flex: 1;
+        }
+
+        .info-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .customer-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .customer-contact {
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .shipping-address {
+            white-space: pre-line;
+            line-height: 1.4;
+        }
+
+        .order-items {
+            margin-top: 20px;
+        }
+
+        .items-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .item-list {
+            border-top: 1px solid #eee;
+        }
+
+        .order-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .item-image {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 15px;
+        }
+
+        .item-details {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 500;
+        }
+
+        .item-price {
+            width: 100px;
+            text-align: right;
+        }
+
+        .item-quantity {
+            width: 70px;
+            text-align: center;
+        }
+
+        .price-amount {
+            font-weight: 500;
+        }
+
+        .price-subtotal {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .order-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+        }
+
+        .order-total {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .action-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .action-button:hover {
+            background: #218838;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #b8451f;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-button:hover {
+            background: #943618;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .orders-container {
+                padding: 20px;
+            }
+            
+            .customer-info {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .order-item {
+                flex-wrap: wrap;
+            }
+            
+            .item-details {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .item-price {
+                width: auto;
+                margin-left: auto;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="report-container">
-        <div class="section">
-            <h2>Orders Overview</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <i class="fas fa-shopping-bag"></i>
-                    <h3>Total Orders</h3>
-                    <p><?php echo $stats['total_orders'] ?? 0; ?></p>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-box"></i>
-                    <h3>Items Sold</h3>
-                    <p><?php echo $stats['total_items_sold'] ?? 0; ?></p>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-rupee-sign"></i>
-                    <h3>Total Revenue</h3>
-                    <p>₹<?php echo number_format($stats['total_revenue'] ?? 0, 2); ?></p>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-users"></i>
-                    <h3>Unique Customers</h3>
-                    <p><?php echo $stats['unique_customers'] ?? 0; ?></p>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-clock"></i>
-                    <h3>Pending Orders</h3>
-                    <p><?php echo $stats['pending_orders'] ?? 0; ?></p>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-check-circle"></i>
-                    <h3>Completed Orders</h3>
-                    <p><?php echo $stats['completed_orders'] ?? 0; ?></p>
-                </div>
-            </div>
+    <div class="container">
+        <div class="page-header">
+            <i class="fas fa-shopping-cart"></i>
+            <h1 class="page-title">Orders</h1>
+            <span class="order-count"><?php echo count($orders); ?> orders</span>
         </div>
 
-        <div class="section">
-            <h2>Order History</h2>
-            
-            <div class="order-filters">
-                <select class="filter-select" id="statusFilter">
-                    <option value="">All Statuses</option>
-                    <option value="processing">Processing</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                </select>
-                
-                <select class="filter-select" id="dateFilter">
-                    <option value="">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                </select>
-            </div>
-
-            <?php if ($orders->num_rows > 0): ?>
-            <table class="orders-table">
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Order Details</th>
-                        <th>Customer</th>
-                        <th>Status</th>
-                        <th>Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php while ($order = $orders->fetch_assoc()): ?>
-                        <tr>
-                            <td>
-                                <img src="<?php echo htmlspecialchars($order['image_url']); ?>" 
-                                     alt="<?php echo htmlspecialchars($order['product_name']); ?>"
-                                     class="product-image">
-                                <div>
-                                    <div><?php echo htmlspecialchars($order['product_name']); ?></div>
-                                    <div class="category-tag">
-                                        <?php echo htmlspecialchars($order['category_name'] . ' / ' . $order['subcategory_name']); ?>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div><strong>Order ID:</strong> <?php echo htmlspecialchars($order['order_id']); ?></div>
-                                <div><strong>Date:</strong> <?php echo date('F j, Y, g:i a', strtotime($order['created_at'])); ?></div>
-                                <div><strong>Quantity:</strong> <?php echo $order['quantity']; ?></div>
-                                <div>
-                                    <span class="payment-badge payment-<?php echo strtolower($order['payment_status']); ?>">
-                                        Payment: <?php echo ucfirst($order['payment_status']); ?>
-                                    </span>
-                                </div>
-                            </td>
-                            <td>
-                                <div><strong><?php echo htmlspecialchars($order['customer_name']); ?></strong></div>
-                                <div class="customer-info">
-                                    <div><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($order['customer_email']); ?></div>
-                                    <div><i class="fas fa-phone"></i> <?php echo htmlspecialchars($order['customer_phone']); ?></div>
-                                    <div><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($order['shipping_address']); ?></div>
-                                </div>
-                            </td>
-                            <td>
+        <div class="orders-container">
+            <?php if (empty($orders)): ?>
+                <div class="no-orders">
+                    <i class="fas fa-shopping-cart"></i>
+                    <h3>No Orders</h3>
+                    <p>You haven't received any orders yet.</p>
+                </div>
+            <?php else: ?>
+                <?php foreach ($orders as $order): ?>
+                    <div class="order-card">
+                        <div class="order-header">
+                            <div>
+                                <span class="order-id">Order #<?php echo htmlspecialchars($order['order_id']); ?></span>
                                 <span class="status-badge status-<?php echo strtolower($order['order_status']); ?>">
                                     <?php echo ucfirst($order['order_status']); ?>
                                 </span>
-                            </td>
-                            <td>
-                                <div><strong>₹<?php echo number_format($order['subtotal'], 2); ?></strong></div>
-                                <div class="customer-info">
-                                    <div>Unit: ₹<?php echo number_format($order['price'], 2); ?></div>
+                            </div>
+                            <div class="order-date">
+                                <i class="far fa-calendar-alt"></i>
+                                <?php echo date('F j, Y, g:i a', strtotime($order['created_at'])); ?>
+                            </div>
+                        </div>
+
+                        <div class="order-body">
+                            <div class="customer-info">
+                                <div class="info-column">
+                                    <div class="info-label">Customer</div>
+                                    <div class="customer-name"><?php echo htmlspecialchars($order['customer_name']); ?></div>
+                                    <div class="customer-contact">
+                                        <i class="fas fa-envelope"></i> <?php echo htmlspecialchars($order['customer_email']); ?>
+                                    </div>
+                                    <?php if (!empty($order['customer_phone'])): ?>
+                                    <div class="customer-contact">
+                                        <i class="fas fa-phone"></i> <?php echo htmlspecialchars($order['customer_phone']); ?>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
-            <?php else: ?>
-                <div class="no-orders">
-                    <i class="fas fa-box-open"></i>
-                    <h3>No Orders Yet</h3>
-                    <p>You haven't received any orders for your products yet.</p>
-                </div>
+                                
+                                <div class="info-column">
+                                    <div class="info-label">Shipping Address</div>
+                                    <div class="shipping-address">
+                                        <?php echo nl2br(htmlspecialchars($order['shipping_address'])); ?>
+                                    </div>
+                                </div>
+                                
+                                <div class="info-column">
+                                    <div class="info-label">Payment</div>
+                                    <div class="customer-name"><?php echo ucfirst($order['payment_status']); ?></div>
+                                </div>
+                            </div>
+
+                            <div class="order-items">
+                                <div class="items-label">Order Items</div>
+                                <div class="item-list">
+                                    <?php if (isset($order_items[$order['order_id']])): ?>
+                                        <?php foreach ($order_items[$order['order_id']] as $item): ?>
+                                            <div class="order-item">
+                                                <img src="<?php echo htmlspecialchars($item['product_image']); ?>" alt="<?php echo htmlspecialchars($item['product_name']); ?>" class="item-image">
+                                                
+                                                <div class="item-details">
+                                                    <div class="item-name"><?php echo htmlspecialchars($item['product_name']); ?></div>
+                                                </div>
+                                                
+                                                <div class="item-quantity">
+                                                    <?php echo $item['quantity']; ?> × 
+                                                </div>
+                                                
+                                                <div class="item-price">
+                                                    <div class="price-amount">₹<?php echo number_format($item['sold_price'], 2); ?></div>
+                                                    <div class="price-subtotal">₹<?php echo number_format($item['subtotal'], 2); ?></div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <p>No items found for this order.</p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="order-footer">
+                            <div class="order-total">
+                                Total: ₹<?php echo number_format($order['total_amount'], 2); ?>
+                            </div>
+                            
+                            <?php if ($order['order_status'] === 'processing'): ?>
+                                <form method="post">
+                                    <input type="hidden" name="order_id" value="<?php echo htmlspecialchars($order['order_id']); ?>">
+                                    <button type="submit" name="mark_completed" class="action-button">
+                                        <i class="fas fa-check"></i> Mark as Completed
+                                    </button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             <?php endif; ?>
         </div>
 
@@ -274,42 +488,5 @@ $orders = $stmt->get_result();
             <i class="fas fa-arrow-left"></i> Back to Dashboard
         </a>
     </div>
-
-    <script>
-        // Filter functionality
-        document.getElementById('statusFilter').addEventListener('change', filterOrders);
-        document.getElementById('dateFilter').addEventListener('change', filterOrders);
-
-        function filterOrders() {
-            const statusFilter = document.getElementById('statusFilter').value;
-            const dateFilter = document.getElementById('dateFilter').value;
-            const rows = document.querySelectorAll('.orders-table tbody tr');
-            
-            rows.forEach(row => {
-                const status = row.querySelector('.status-badge').textContent.trim().toLowerCase();
-                const date = new Date(row.querySelector('td:nth-child(2)').textContent.split('Date:')[1]);
-                let showRow = true;
-                
-                if (statusFilter && !status.includes(statusFilter)) {
-                    showRow = false;
-                }
-                
-                if (dateFilter) {
-                    const now = new Date();
-                    if (dateFilter === 'today' && date.toDateString() !== now.toDateString()) {
-                        showRow = false;
-                    } else if (dateFilter === 'week' && (now - date) > 7 * 24 * 60 * 60 * 1000) {
-                        showRow = false;
-                    } else if (dateFilter === 'month' && 
-                             (date.getMonth() !== now.getMonth() || 
-                              date.getFullYear() !== now.getFullYear())) {
-                        showRow = false;
-                    }
-                }
-                
-                row.style.display = showRow ? '' : 'none';
-            });
-        }
-    </script>
 </body>
 </html>

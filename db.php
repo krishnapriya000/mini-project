@@ -537,4 +537,96 @@ $modify_cart_items = "ALTER TABLE cart_items
 if (!$conn->query($modify_cart_items)) {
     echo "Error modifying cart_items table: " . $conn->error . "<br>";
 }
+
+// Place this in your checkout processing code
+
+// Start transaction
+$conn->begin_transaction();
+
+try {
+    // Get cart items
+    $get_cart_items = "SELECT ci.product_id, ci.quantity, p.stock_quantity, p.name
+                      FROM cart_items ci
+                      JOIN product_table p ON ci.product_id = p.product_id
+                      WHERE ci.signupid = ? AND ci.status = 'active'";
+    
+    $stmt = $conn->prepare($get_cart_items);
+    $stmt->bind_param("i", $signupid);
+    $stmt->execute();
+    $cart_items = $stmt->get_result();
+    
+    $stock_issue = false;
+    $out_of_stock_items = [];
+    
+    // Verify all products are in stock with requested quantity
+    while ($item = $cart_items->fetch_assoc()) {
+        if ($item['quantity'] > $item['stock_quantity']) {
+            $stock_issue = true;
+            $out_of_stock_items[] = $item['name'];
+        }
+    }
+    
+    if ($stock_issue) {
+        throw new Exception("Some items in your cart are no longer available in the requested quantity: " . 
+                           implode(", ", $out_of_stock_items));
+    }
+    
+    // Generate order ID
+    $order_id = uniqid('ORD');
+    
+    // Insert order into orders_table
+    // ... your order creation code ...
+    
+    // Update inventory for each product
+    $update_inventory = "UPDATE product_table 
+                        SET stock_quantity = stock_quantity - ? 
+                        WHERE product_id = ?";
+    
+    $stmt = $conn->prepare($update_inventory);
+    
+    // Reset the result pointer
+    $stmt = $conn->prepare($get_cart_items);
+    $stmt->bind_param("i", $signupid);
+    $stmt->execute();
+    $cart_items = $stmt->get_result();
+    
+    while ($item = $cart_items->fetch_assoc()) {
+        $stmt = $conn->prepare($update_inventory);
+        $stmt->bind_param("ii", $item['quantity'], $item['product_id']);
+        $stmt->execute();
+    }
+    
+    // Update cart items to link them to the order and mark as processed
+    $update_cart_items = "UPDATE cart_items 
+                         SET order_id = ?, status = 'disabled' 
+                         WHERE signupid = ? AND status = 'active'";
+    
+    $stmt = $conn->prepare($update_cart_items);
+    $stmt->bind_param("si", $order_id, $signupid);
+    $stmt->execute();
+    
+    // Update cart status
+    $update_cart = "UPDATE cart_table 
+                   SET status = 'completed' 
+                   WHERE signupid = ? AND status = 'active'";
+    
+    $stmt = $conn->prepare($update_cart);
+    $stmt->bind_param("i", $signupid);
+    $stmt->execute();
+    
+    // Commit the transaction
+    $conn->commit();
+    
+    // Success handling
+    // ...
+    
+} catch (Exception $e) {
+    // Rollback the transaction
+    $conn->rollback();
+    
+    // Error handling
+    $_SESSION['checkout_error'] = $e->getMessage();
+    header("Location: cart.php");
+    exit();
+}
 ?>

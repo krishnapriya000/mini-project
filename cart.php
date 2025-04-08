@@ -55,8 +55,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id']) && isse
                      FROM product_table p
                      JOIN categories_table c ON p.category_id = c.category_id
                      JOIN subcategories s ON p.subcategory_id = s.id
-                     WHERE p.product_id = ?";
+                     WHERE p.product_id = ? FOR UPDATE"; // Added FOR UPDATE to lock the row
     
+    // Start transaction for stock management
+    $conn->begin_transaction();
+    
+    try {
     $stmt = $conn->prepare($product_query);
     $stmt->bind_param("i", $product_id);
     $stmt->execute();
@@ -68,11 +72,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id']) && isse
         // Check if product is in stock
         if ($product['stock_quantity'] <= 0) {
             $error = "Sorry, this product is out of stock!";
+                $conn->rollback(); // Rollback transaction
         } 
         // Check if requested quantity is available
         elseif ($quantity > $product['stock_quantity']) {
             $error = "Sorry, only " . $product['stock_quantity'] . " items are available in stock!";
             $quantity = $product['stock_quantity']; // Set to max available
+                
+                // Check if user already has an active cart
+                $cart_check_query = "SELECT cart_id FROM cart_table 
+                                    WHERE signupid = ? AND status = 'active' 
+                                    LIMIT 1";
+                
+                $stmt = $conn->prepare($cart_check_query);
+                $stmt->bind_param("i", $signupid);
+                $stmt->execute();
+                $cart_result = $stmt->get_result();
+                
+                // If cart doesn't exist, create one
+                if ($cart_result->num_rows === 0) {
+                    $create_cart_query = "INSERT INTO cart_table (signupid, status) VALUES (?, 'active')";
+                    $stmt = $conn->prepare($create_cart_query);
+                    $stmt->bind_param("i", $signupid);
+                    $stmt->execute();
+                    $cart_id = $conn->insert_id;
+                } else {
+                    $cart_row = $cart_result->fetch_assoc();
+                    $cart_id = $cart_row['cart_id'];
+                }
+                
+                // Check if product already exists in cart
+                $check_item_query = "SELECT cart_item_id, quantity, status FROM cart_items 
+                                    WHERE cart_id = ? AND product_id = ?
+                                    LIMIT 1";
+                
+                $stmt = $conn->prepare($check_item_query);
+                $stmt->bind_param("ii", $cart_id, $product_id);
+                $stmt->execute();
+                $item_result = $stmt->get_result();
+                
+                if ($item_result->num_rows > 0) {
+                    // Item exists in cart, might be active or inactive
+                    $item_row = $item_result->fetch_assoc();
+                    
+                    if ($item_row['status'] === 'active') {
+                        // If active, update quantity
+                        $new_quantity = $item_row['quantity'] + $quantity;
+                        
+                        // Check again if new total quantity exceeds available stock
+                        if ($new_quantity > $product['stock_quantity']) {
+                            $new_quantity = $product['stock_quantity'];
+                            $message = "Cart updated to maximum available quantity!";
+                        } else {
+                            $message = "Cart updated successfully!";
+                        }
+                        
+                        $update_query = "UPDATE cart_items SET quantity = ? WHERE cart_item_id = ?";
+                        $stmt = $conn->prepare($update_query);
+                        $stmt->bind_param("ii", $new_quantity, $item_row['cart_item_id']);
+                        $stmt->execute();
+                    } else {
+                        // If inactive, reactivate it and set new quantity
+                        $update_query = "UPDATE cart_items SET status = 'active', quantity = ? WHERE cart_item_id = ?";
+                        $stmt = $conn->prepare($update_query);
+                        $stmt->bind_param("ii", $quantity, $item_row['cart_item_id']);
+                        $stmt->execute();
+                        $message = "Product added to cart successfully!";
+                    }
+                } else {
+                    // Add new product to cart
+                    try {
+                        $add_query = "INSERT INTO cart_items 
+                                     (cart_id, signupid, product_id, category_id, subcategory_id, quantity, price, status) 
+                                     VALUES (?, ?, ?, ?, ?, ?, ?, 'active')";
+                        
+                        $stmt = $conn->prepare($add_query);
+                        $stmt->bind_param("iiiidsd", $cart_id, $signupid, $product_id, 
+                                         $product['category_id'], $product['subcategory_id'], 
+                                         $quantity, $product['price']);
+                        
+                        if ($stmt->execute()) {
+                            $message = "Product added to cart successfully!";
+                        } else {
+                            $error = "Error adding product to cart: " . $stmt->error;
+                            error_log("Cart error: " . $stmt->error . " for Product ID: " . $product_id);
+                        }
+                    } catch (Exception $e) {
+                        // Handle duplicate entry error
+                        if ($e->getCode() == 1062) { // MySQL error code for duplicate entry
+                            // Try to update the existing item instead
+                            $update_query = "UPDATE cart_items SET status = 'active', quantity = ? 
+                                           WHERE cart_id = ? AND product_id = ?";
+                            $stmt = $conn->prepare($update_query);
+                            $stmt->bind_param("iii", $quantity, $cart_id, $product_id);
+                            $stmt->execute();
+                            $message = "Product added to cart successfully!";
+                        } else {
+                            $error = "Error adding product to cart: " . $e->getMessage();
+                            error_log("Cart error: " . $e->getMessage() . " for Product ID: " . $product_id);
+                        }
+                    }
+                }
+                
+                $conn->commit(); // Commit transaction
+                $message = "Added maximum available quantity to cart!";
         } 
         else {
             // Check if user already has an active cart
@@ -169,9 +272,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id']) && isse
                     }
                 }
             }
+                
+                $conn->commit(); // Commit transaction
         }
     } else {
         $error = "Product not found!";
+            $conn->rollback(); // Rollback transaction
+        }
+    } catch (Exception $e) {
+        $conn->rollback(); // Rollback transaction on error
+        $error = "Error processing request: " . $e->getMessage();
+        error_log("Cart error: " . $e->getMessage());
     }
 }
 
@@ -739,7 +850,9 @@ $subtotal = 0;
         const cartItems = document.querySelectorAll('.cart-item');
         cartItems.forEach(item => {
             const stockElement = item.querySelector('.item-stock span');
-            if (stockElement && stockElement.style.color === 'rgb(231, 76, 60)') { // Out of stock color
+            if (stockElement) {
+                // Out of stock
+                if (stockElement.style.color === 'rgb(231, 76, 60)') {
                 item.style.opacity = '0.6';
                 const quantityControls = item.querySelector('.quantity-control');
                 if (quantityControls) {
@@ -747,6 +860,37 @@ $subtotal = 0;
                     buttons.forEach(button => {
                         button.disabled = true;
                     });
+                    }
+                    // Add an out-of-stock badge
+                    const badge = document.createElement('div');
+                    badge.className = 'out-of-stock-badge';
+                    badge.innerText = 'Out of Stock';
+                    badge.style.position = 'absolute';
+                    badge.style.top = '10px';
+                    badge.style.right = '10px';
+                    badge.style.backgroundColor = '#e74c3c';
+                    badge.style.color = 'white';
+                    badge.style.padding = '5px 10px';
+                    badge.style.borderRadius = '3px';
+                    badge.style.fontSize = '12px';
+                    item.style.position = 'relative';
+                    item.appendChild(badge);
+                }
+                // Low stock warning
+                else if (stockElement.style.color === 'rgb(230, 126, 34)') {
+                    const lowStockBadge = document.createElement('div');
+                    lowStockBadge.className = 'low-stock-badge';
+                    lowStockBadge.innerText = 'Low Stock';
+                    lowStockBadge.style.position = 'absolute';
+                    lowStockBadge.style.top = '10px';
+                    lowStockBadge.style.right = '10px';
+                    lowStockBadge.style.backgroundColor = '#e67e22';
+                    lowStockBadge.style.color = 'white';
+                    lowStockBadge.style.padding = '5px 10px';
+                    lowStockBadge.style.borderRadius = '3px';
+                    lowStockBadge.style.fontSize = '12px';
+                    item.style.position = 'relative';
+                    item.appendChild(lowStockBadge);
                 }
             }
         });

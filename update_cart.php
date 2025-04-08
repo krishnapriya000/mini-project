@@ -39,64 +39,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cart_item_id']) && is
     $cart_item_id = (int)$_POST['cart_item_id'];
     $action = $_POST['action'];
     
-    // Verify the cart item belongs to the user
-    $verify_query = "SELECT ci.*, ct.cart_id 
-                    FROM cart_items ci 
-                    JOIN cart_table ct ON ci.cart_id = ct.cart_id 
-                    WHERE ci.cart_item_id = ? AND ci.signupid = ? AND ct.status = 'active'";
+    // Start transaction for stock management
+    $conn->begin_transaction();
     
-    $stmt = $conn->prepare($verify_query);
-    $stmt->bind_param("ii", $cart_item_id, $signupid);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result && $result->num_rows > 0) {
-        $cart_item = $result->fetch_assoc();
+    try {
+        // Get current cart item data with product information
+        $get_item_query = "SELECT ci.*, p.stock_quantity 
+                          FROM cart_items ci
+                          JOIN product_table p ON ci.product_id = p.product_id
+                          WHERE ci.cart_item_id = ?";
         
-        switch ($action) {
-            case 'increase':
-                // Increase quantity
-                $new_quantity = $cart_item['quantity'] + 1;
-                $update_query = "UPDATE cart_items SET quantity = ? WHERE cart_item_id = ?";
-                $stmt = $conn->prepare($update_query);
-                $stmt->bind_param("ii", $new_quantity, $cart_item_id);
-                $stmt->execute();
-                break;
-                
-            case 'decrease':
-                // Decrease quantity, but don't go below 1
-                $new_quantity = max(1, $cart_item['quantity'] - 1);
-                $update_query = "UPDATE cart_items SET quantity = ? WHERE cart_item_id = ?";
-                $stmt = $conn->prepare($update_query);
-                $stmt->bind_param("ii", $new_quantity, $cart_item_id);
-                $stmt->execute();
-                break;
-                
-            case 'remove':
-                // Instead of deleting, add a status column to cart_items and update it
-                // First, check if the status column exists, if not, add it
-                $check_column = "SHOW COLUMNS FROM cart_items LIKE 'status'";
-                $result = $conn->query($check_column);
-                if ($result->num_rows === 0) {
-                    // Add status column if it doesn't exist
-                    $add_column = "ALTER TABLE cart_items ADD COLUMN status ENUM('active', 'disabled') DEFAULT 'active'";
-                    $conn->query($add_column);
-                }
-                
-                // Update the status to 'disabled' instead of deleting
-                $update_query = "UPDATE cart_items SET status = 'disabled' WHERE cart_item_id = ?";
-                $stmt = $conn->prepare($update_query);
-                $stmt->bind_param("i", $cart_item_id);
-                $stmt->execute();
-                break;
+        $stmt = $conn->prepare($get_item_query);
+        $stmt->bind_param("i", $cart_item_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            $item = $result->fetch_assoc();
+            $current_quantity = $item['quantity'];
+            $product_id = $item['product_id'];
+            $stock_quantity = $item['stock_quantity'];
+            
+            // Process action
+            switch ($action) {
+                case 'increase':
+                    // Check if increasing quantity is possible
+                    if ($current_quantity < $stock_quantity) {
+                        $new_quantity = $current_quantity + 1;
+                        
+                        $update_query = "UPDATE cart_items SET quantity = ? WHERE cart_item_id = ?";
+                        $stmt = $conn->prepare($update_query);
+                        $stmt->bind_param("ii", $new_quantity, $cart_item_id);
+                        $stmt->execute();
+                        
+                        $_SESSION['cart_message'] = "Cart updated successfully!";
+                    } else {
+                        $_SESSION['cart_error'] = "Cannot add more items. Maximum stock reached.";
+                    }
+                    break;
+                    
+                case 'decrease':
+                    if ($current_quantity > 1) {
+                        $new_quantity = $current_quantity - 1;
+                        
+                        $update_query = "UPDATE cart_items SET quantity = ? WHERE cart_item_id = ?";
+                        $stmt = $conn->prepare($update_query);
+                        $stmt->bind_param("ii", $new_quantity, $cart_item_id);
+                        $stmt->execute();
+                        
+                        $_SESSION['cart_message'] = "Cart updated successfully!";
+                    } else {
+                        // If trying to decrease below 1, remove the item
+                        $delete_query = "UPDATE cart_items SET status = 'disabled' WHERE cart_item_id = ?";
+                        $stmt = $conn->prepare($delete_query);
+                        $stmt->bind_param("i", $cart_item_id);
+                        $stmt->execute();
+                        
+                        $_SESSION['cart_message'] = "Item removed from cart!";
+                    }
+                    break;
+                    
+                case 'remove':
+                    // Soft delete by setting status to disabled
+                    $delete_query = "UPDATE cart_items SET status = 'disabled' WHERE cart_item_id = ?";
+                    $stmt = $conn->prepare($delete_query);
+                    $stmt->bind_param("i", $cart_item_id);
+                    $stmt->execute();
+                    
+                    $_SESSION['cart_message'] = "Item removed from cart!";
+                    break;
+                    
+                default:
+                    $_SESSION['cart_error'] = "Invalid action!";
+                    break;
+            }
+            
+            // Commit the transaction
+            $conn->commit();
+            
+        } else {
+            $_SESSION['cart_error'] = "Cart item not found!";
+            $conn->rollback();
         }
+    } catch (Exception $e) {
+        // Rollback on error
+        $conn->rollback();
+        $_SESSION['cart_error'] = "Error: " . $e->getMessage();
     }
     
-    // Redirect back to the cart page
+    // Redirect back to cart page
     header("Location: cart.php");
     exit();
 } else {
-    // Invalid request
+    $_SESSION['cart_error'] = "Invalid request!";
     header("Location: cart.php");
     exit();
 }
