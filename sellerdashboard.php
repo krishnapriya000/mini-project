@@ -278,10 +278,10 @@ if (!$seller_data) {
             Add Product
         </a>
        
-        <a href="earnings.php" class="sidebar-item">
+        <!-- <a href="earnings.php" class="sidebar-item">
             <i class="fas fa-dollar-sign"></i>
             Earnings
-        </a>
+        </a> -->
         <a href="logout.php" class="sidebar-item">
             <i class="fas fa-sign-out-alt"></i>
             Logout
